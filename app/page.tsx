@@ -1,65 +1,105 @@
-import Image from "next/image";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import type { Model } from "@/types";
 
-export default function Home() {
+function StatusBadge({ status }: { status: string }) {
+  const isNew = status === "new";
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <span
+      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+        isNew
+          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400"
+          : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+      }`}
+    >
+      {isNew ? "new" : status}
+    </span>
+  );
+}
+
+export default async function HomePage() {
+  const supabase = await createClient();
+  const { data: models } = await supabase
+    .from("models")
+    .select(
+      `
+      id,
+      name,
+      slug,
+      token_count,
+      status,
+      highlights,
+      rank_order,
+      providers (
+        name,
+        slug,
+        avg_rating,
+        companies (name)
+      )
+    `
+    )
+    .order("rank_order", { ascending: true });
+
+  const modelList = (models ?? []) as Model[];
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-12">
+      <div className="mb-12 text-center">
+        <h1 className="mb-4 text-4xl font-bold tracking-tight">
+          LLM API Marketplace
+        </h1>
+        <p className="mx-auto max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
+          Find the perfect API for your needs. Compare models, pricing, and
+          capabilities from top providers.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {modelList.map((model) => {
+          const provider = model.providers as Model["providers"];
+          const company = provider?.companies as { name?: string } | null;
+          return (
+            <Link
+              key={model.id}
+              href={`/models/${model.slug}`}
+              className="group rounded-xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:border-zinc-300 hover:shadow dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <div>
+                  <h2 className="font-semibold text-zinc-900 group-hover:text-zinc-700 dark:text-zinc-100 dark:group-hover:text-zinc-200">
+                    {model.name}
+                  </h2>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                    {company?.name ?? provider?.name ?? "—"}
+                  </p>
+                </div>
+                <StatusBadge status={model.status} />
+              </div>
+              <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
+                <span>{model.token_count} tokens</span>
+                {provider?.avg_rating != null && (
+                  <span className="flex items-center gap-1">
+                    <span className="text-amber-500">★</span>
+                    {Number(provider.avg_rating).toFixed(1)}
+                  </span>
+                )}
+              </div>
+              {model.highlights && model.highlights.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {(model.highlights as string[]).slice(0, 3).map((h) => (
+                    <span
+                      key={h}
+                      className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                    >
+                      {h}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }
