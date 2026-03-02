@@ -1,22 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import type { ModelDetail, Product, Review } from "@/types";
-
-function StatusBadge({ status }: { status: string }) {
-  const isNew = status === "new";
-  return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-sm font-medium ${
-        isNew
-          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400"
-          : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-      }`}
-    >
-      {isNew ? "new" : status}
-    </span>
-  );
-}
+import type { ModelDetail, Review } from "@/types";
 
 export default async function ModelPage({
   params,
@@ -33,13 +18,10 @@ export default async function ModelPage({
       id,
       name,
       slug,
-      token_count,
-      status,
       description,
       highlights,
       rank_order,
-      documentation_url,
-      output_examples,
+      api_docs,
       providers (
         id,
         name,
@@ -59,18 +41,11 @@ export default async function ModelPage({
 
   if (!model) notFound();
 
-  const [{ data: products }, { data: reviews }] = await Promise.all([
-    supabase
-      .from("products")
-      .select("*")
-      .eq("model_id", model.id)
-      .order("token_limit", { ascending: false }),
-    supabase
-      .from("reviews")
-      .select("id, author_name, rating, content, created_at")
-      .eq("model_id", model.id)
-      .order("created_at", { ascending: false }),
-  ]);
+  const { data: reviews } = await supabase
+    .from("reviews")
+    .select("model_id, comment_id, author_name, rating, content, created_at")
+    .eq("model_id", model.id)
+    .order("created_at", { ascending: false });
 
   const rawProviders = model.providers;
   const providers = Array.isArray(rawProviders)
@@ -79,8 +54,6 @@ export default async function ModelPage({
 
   const modelDetail: ModelDetail = {
     ...model,
-    output_examples: (model.output_examples as ModelDetail["output_examples"]) ?? [],
-    products: (products ?? []) as Product[],
     reviews: (reviews ?? []) as Review[],
     providers: providers as unknown as ModelDetail["providers"],
   };
@@ -110,14 +83,10 @@ export default async function ModelPage({
       </nav>
 
       <div className="mb-10">
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">
-            {modelDetail.name}
-          </h1>
-          <StatusBadge status={modelDetail.status} />
-        </div>
+        <h1 className="mb-4 text-3xl font-bold tracking-tight">
+          {modelDetail.name}
+        </h1>
         <div className="flex flex-wrap items-center gap-4 text-zinc-600 dark:text-zinc-400">
-          <span>{modelDetail.token_count} tokens</span>
           {provider?.avg_rating != null && (
             <span className="flex items-center gap-1">
               <span className="text-amber-500">★</span>
@@ -162,91 +131,19 @@ export default async function ModelPage({
         </section>
       )}
 
-      {modelDetail.products.length > 0 && (
-        <section className="mb-10">
-          <h2 className="mb-4 text-lg font-semibold">Plans</h2>
-          <div className="space-y-4">
-            {modelDetail.products.map((p) => (
-              <div
-                key={p.id}
-                className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
-              >
-                <div className="mb-2 flex items-baseline justify-between">
-                  <span className="font-medium">{p.name}</span>
-                  {p.billing_rate && (
-                    <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                      {p.billing_rate}
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-4 text-sm text-zinc-500 dark:text-zinc-400">
-                  {p.token_limit != null && (
-                    <span>{p.token_limit.toLocaleString()} tokens</span>
-                  )}
-                  {p.call_rate_rpm != null && (
-                    <span>{p.call_rate_rpm} RPM</span>
-                  )}
-                  {p.audience && <span>{p.audience}</span>}
-                </div>
-                {p.capabilities && p.capabilities.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {(p.capabilities as string[]).map((c) => (
-                      <span
-                        key={c}
-                        className="rounded bg-zinc-100 px-2 py-0.5 text-xs dark:bg-zinc-800"
-                      >
-                        {c}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {modelDetail.documentation_url && (
+      {modelDetail.api_docs && (
         <section className="mb-10">
           <h2 className="mb-3 text-lg font-semibold">Documentation</h2>
           <a
-            href={modelDetail.documentation_url}
+            href={modelDetail.api_docs}
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-600 hover:underline dark:text-blue-400"
           >
-            View documentation →
+            View API documentation →
           </a>
         </section>
       )}
-
-      {modelDetail.output_examples &&
-        modelDetail.output_examples.length > 0 && (
-          <section className="mb-10">
-            <h2 className="mb-4 text-lg font-semibold">Output Examples</h2>
-            <div className="space-y-4">
-              {modelDetail.output_examples.map((ex, i) => (
-                <div
-                  key={i}
-                  className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50"
-                >
-                  <p className="mb-2 text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                    Prompt
-                  </p>
-                  <pre className="mb-4 overflow-x-auto whitespace-pre-wrap rounded bg-white p-3 text-sm dark:bg-zinc-950">
-                    {ex.prompt}
-                  </pre>
-                  <p className="mb-2 text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                    Output
-                  </p>
-                  <pre className="overflow-x-auto whitespace-pre-wrap rounded bg-white p-3 text-sm dark:bg-zinc-950">
-                    {ex.output}
-                  </pre>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
 
       {modelDetail.reviews.length > 0 && (
         <section className="mb-10">
@@ -254,7 +151,7 @@ export default async function ModelPage({
           <div className="space-y-4">
             {modelDetail.reviews.map((r) => (
               <div
-                key={r.id}
+                key={r.comment_id}
                 className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
               >
                 <div className="mb-2 flex items-center gap-2">

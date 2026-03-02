@@ -2,21 +2,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Model } from "@/types";
 
-function StatusBadge({ status }: { status: string }) {
-  const isNew = status === "new";
-  return (
-    <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-        isNew
-          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400"
-          : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-      }`}
-    >
-      {isNew ? "new" : status}
-    </span>
-  );
-}
-
 export default async function HomePage() {
   const supabase = await createClient();
   const { data: models } = await supabase
@@ -26,8 +11,6 @@ export default async function HomePage() {
       id,
       name,
       slug,
-      token_count,
-      status,
       highlights,
       rank_order,
       providers (
@@ -64,19 +47,15 @@ export default async function HomePage() {
               href={`/models/${model.slug}`}
               className="group rounded-xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:border-zinc-300 hover:shadow dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
             >
-              <div className="mb-3 flex items-start justify-between gap-2">
-                <div>
-                  <h2 className="font-semibold text-zinc-900 group-hover:text-zinc-700 dark:text-zinc-100 dark:group-hover:text-zinc-200">
-                    {model.name}
-                  </h2>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                    {company?.name ?? provider?.name ?? "—"}
-                  </p>
-                </div>
-                <StatusBadge status={model.status} />
+              <div className="mb-3">
+                <h2 className="font-semibold text-zinc-900 group-hover:text-zinc-700 dark:text-zinc-100 dark:group-hover:text-zinc-200">
+                  {model.name}
+                </h2>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  {company?.name ?? provider?.name ?? "—"}
+                </p>
               </div>
               <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
-                <span>{model.token_count} tokens</span>
                 {provider?.avg_rating != null && (
                   <span className="flex items-center gap-1">
                     <span className="text-amber-500">★</span>

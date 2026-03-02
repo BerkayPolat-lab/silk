@@ -13,26 +13,15 @@ export type Model = {
   id: string;
   name: string;
   slug: string;
-  token_count: string;
-  status: string;
   description: string | null;
   highlights: string[];
   rank_order: number | null;
   providers: Provider | null;
 };
 
-export type Product = {
-  id: string;
-  name: string;
-  token_limit: number | null;
-  call_rate_rpm: number | null;
-  audience: string | null;
-  billing_rate: string | null;
-  capabilities: string[];
-};
-
 export type Review = {
-  id: string;
+  model_id: string;
+  comment_id: string;
   author_name: string | null;
   rating: number;
   content: string | null;
@@ -40,9 +29,7 @@ export type Review = {
 };
 
 export type ModelDetail = Model & {
-  documentation_url: string | null;
-  output_examples: { prompt: string; output: string }[];
-  products: Product[];
+  api_docs: string | null;
   reviews: Review[];
   providers: (Provider & {
     companies: {

@@ -15,12 +15,9 @@ export async function GET(
       id,
       name,
       slug,
-      token_count,
-      status,
       description,
       highlights,
-      documentation_url,
-      output_examples,
+      api_docs,
       providers (
         id,
         name,
@@ -45,22 +42,14 @@ export async function GET(
     );
   }
 
-  const [{ data: products }, { data: reviews }] = await Promise.all([
-    supabase
-      .from("products")
-      .select("*")
-      .eq("model_id", model.id)
-      .order("token_limit", { ascending: false }),
-    supabase
-      .from("reviews")
-      .select("id, author_name, rating, content, created_at")
-      .eq("model_id", model.id)
-      .order("created_at", { ascending: false }),
-  ]);
+  const { data: reviews } = await supabase
+    .from("reviews")
+      .select("model_id, comment_id, author_name, rating, content, created_at")
+    .eq("model_id", model.id)
+    .order("created_at", { ascending: false });
 
   return NextResponse.json({
     ...model,
-    products: products ?? [],
     reviews: reviews ?? [],
   });
 }

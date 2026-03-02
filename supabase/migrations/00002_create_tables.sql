@@ -24,12 +24,9 @@ CREATE TABLE IF NOT EXISTS models (
   provider_id UUID NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   slug TEXT NOT NULL UNIQUE,
-  token_count TEXT NOT NULL,
-  status TEXT NOT NULL,
   description TEXT,
   highlights JSONB DEFAULT '[]',
-  documentation_url TEXT,
-  output_examples JSONB DEFAULT '[]',
+  api_docs TEXT,
   litellm_model_id TEXT,
   embedding vector(1536),
   rank_order INTEGER,
@@ -41,28 +38,16 @@ CREATE INDEX IF NOT EXISTS models_embedding_idx ON models
 USING hnsw (embedding vector_cosine_ops)
 WHERE embedding IS NOT NULL;
 
--- Products: plans/options per model
-CREATE TABLE IF NOT EXISTS products (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  model_id UUID NOT NULL REFERENCES models(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  token_limit INTEGER,
-  call_rate_rpm INTEGER,
-  audience TEXT,
-  billing_rate TEXT,
-  capabilities JSONB DEFAULT '[]',
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Reviews: developer/business reviews
+-- Reviews: developer/business reviews (PK: model_id, comment_id)
 CREATE TABLE IF NOT EXISTS reviews (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   model_id UUID NOT NULL REFERENCES models(id) ON DELETE CASCADE,
+  comment_id UUID NOT NULL DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   author_name TEXT,
   rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
   content TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY (model_id, comment_id)
 );
 
 -- User API keys: platform API keys for users
@@ -83,7 +68,6 @@ CREATE TABLE IF NOT EXISTS api_usage (
   model_id UUID NOT NULL REFERENCES models(id) ON DELETE CASCADE,
   api_key_id UUID REFERENCES user_api_keys(id) ON DELETE SET NULL,
   first_used_at TIMESTAMPTZ DEFAULT now(),
-  request_count INTEGER DEFAULT 1,
   UNIQUE(user_id, model_id, api_key_id)
 );
 
@@ -91,7 +75,6 @@ CREATE TABLE IF NOT EXISTS api_usage (
 ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE providers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE models ENABLE ROW LEVEL SECURITY;
-ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_api_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_usage ENABLE ROW LEVEL SECURITY;
@@ -100,7 +83,6 @@ ALTER TABLE api_usage ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read companies" ON companies FOR SELECT USING (true);
 CREATE POLICY "Public read providers" ON providers FOR SELECT USING (true);
 CREATE POLICY "Public read models" ON models FOR SELECT USING (true);
-CREATE POLICY "Public read products" ON products FOR SELECT USING (true);
 CREATE POLICY "Public read reviews" ON reviews FOR SELECT USING (true);
 
 -- Authenticated users can insert reviews

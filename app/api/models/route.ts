@@ -14,8 +14,6 @@ export async function GET(request: Request) {
       id,
       name,
       slug,
-      token_count,
-      status,
       description,
       highlights,
       rank_order,

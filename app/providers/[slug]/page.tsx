@@ -34,7 +34,7 @@ export default async function ProviderPage({
 
   const { data: models } = await supabase
     .from("models")
-    .select("id, name, slug, token_count, status")
+    .select("id, name, slug")
     .eq("provider_id", provider.id)
     .order("rank_order", { ascending: true });
 
@@ -91,21 +91,7 @@ export default async function ProviderPage({
             href={`/models/${m.slug}`}
             className="block rounded-lg border border-zinc-200 p-4 transition hover:border-zinc-300 dark:border-zinc-800 dark:hover:border-zinc-700"
           >
-            <div className="flex items-center justify-between">
-              <span className="font-medium">{m.name}</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-zinc-500">{m.token_count}</span>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs ${
-                    m.status === "new"
-                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400"
-                      : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                  }`}
-                >
-                  {m.status}
-                </span>
-              </div>
-            </div>
+            <span className="font-medium">{m.name}</span>
           </Link>
         ))}
       </div>
