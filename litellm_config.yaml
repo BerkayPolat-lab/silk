@@ -1,0 +1,64 @@
+general_settings:
+  master_key: "87f7ef287e7c6baab35339fbff346ffe59307913fda8ba683d51e50b2d312eb5"
+
+model_list:
+  - model_name: "openrouter/anthropic/claude-opus-4.6"
+    litellm_params:
+      model: "openrouter/anthropic/claude-opus-4.6"
+      api_key: "os.environ/OPENROUTER_API_KEY"
+
+  - model_name: "openrouter/anthropic/claude-sonnet-4.6"
+    litellm_params:
+      model: "openrouter/anthropic/claude-sonnet-4.6"
+      api_key: "os.environ/OPENROUTER_API_KEY"
+
+  - model_name: "openrouter/deepseek/deepseek-v3.2"
+    litellm_params:
+      model: "openrouter/deepseek/deepseek-v3.2"
+      api_key: "os.environ/OPENROUTER_API_KEY"
+
+  - model_name: "openrouter/google/gemini-2.5-flash"
+    litellm_params:
+      model: "openrouter/google/gemini-2.5-flash"
+      api_key: "os.environ/OPENROUTER_API_KEY"
+
+  - model_name: "openrouter/google/gemini-2.5-flash-lite"
+    litellm_params:
+      model: "openrouter/google/gemini-2.5-flash-lite"
+      api_key: "os.environ/OPENROUTER_API_KEY"
+
+  - model_name: "openrouter/google/gemini-3-flash-preview"
+    litellm_params:
+      model: "openrouter/google/gemini-3-flash-preview"
+      api_key: "os.environ/OPENROUTER_API_KEY"
+
+  - model_name: "openrouter/minimax/minimax-m2.5"
+    litellm_params:
+      model: "openrouter/minimax/minimax-m2.5"
+      api_key: "os.environ/OPENROUTER_API_KEY"
+
+  - model_name: "openrouter/moonshotai/kimi-k2.5"
+    litellm_params:
+      model: "openrouter/moonshotai/kimi-k2.5"
+      api_key: "os.environ/OPENROUTER_API_KEY"
+
+  - model_name: "openrouter/nvidia/nemotron-3-super-120b-a12b:free"
+    litellm_params:
+      model: "openrouter/nvidia/nemotron-3-super-120b-a12b:free"
+      api_key: "os.environ/OPENROUTER_API_KEY"
+
+  - model_name: "openrouter/stepfun/step-3.5-flash:free"
+    litellm_params:
+      model: "openrouter/stepfun/step-3.5-flash:free"
+      api_key: "os.environ/OPENROUTER_API_KEY"
+
+  - model_name: "openrouter/x-ai/grok-4.1-fast"
+    litellm_params:
+      model: "openrouter/x-ai/grok-4.1-fast"
+      api_key: "os.environ/OPENROUTER_API_KEY"
+
+  - model_name: "openrouter/z-ai/glm-5-turbo"
+    litellm_params:
+      model: "openrouter/z-ai/glm-5-turbo"
+      api_key: "os.environ/OPENROUTER_API_KEY"
+

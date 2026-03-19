@@ -145,6 +145,16 @@ export default async function ModelPage({
         </section>
       )}
 
+      <section className="mb-10">
+        <h2 className="mb-3 text-lg font-semibold">Try it</h2>
+        <Link
+          href={`/sandbox/${modelDetail.slug}`}
+          className="inline-flex items-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+        >
+          Try in Sandbox
+        </Link>
+      </section>
+
       {modelDetail.reviews.length > 0 && (
         <section className="mb-10">
           <h2 className="mb-4 text-lg font-semibold">Reviews</h2>
