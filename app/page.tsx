@@ -13,6 +13,8 @@ export default async function HomePage() {
       slug,
       highlights,
       rank_order,
+      avg_rating,
+      total_reviews,
       providers (
         name,
         slug,
@@ -56,12 +58,13 @@ export default async function HomePage() {
                 </p>
               </div>
               <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
-                {provider?.avg_rating != null && (
+                {model.avg_rating != null && (
                   <span className="flex items-center gap-1">
                     <span className="text-amber-500">★</span>
-                    {Number(provider.avg_rating).toFixed(1)}
+                    {Number(model.avg_rating).toFixed(1)}
                   </span>
                 )}
+                <span>{model.total_reviews ?? 0} reviews</span>
               </div>
               {model.highlights && model.highlights.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import type { ModelDetail, Review } from "@/types";
+import type { ModelDetail, Review, ReviewWithOwnership } from "@/types";
+import ReviewForm from "@/components/reviews/ReviewForm";
+import ReviewList from "@/components/reviews/ReviewList";
 
 export default async function ModelPage({
   params,
@@ -10,6 +12,9 @@ export default async function ModelPage({
 }) {
   const { slug } = await params;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { data: model } = await supabase
     .from("models")
@@ -22,6 +27,8 @@ export default async function ModelPage({
       highlights,
       rank_order,
       api_docs,
+      avg_rating,
+      total_reviews,
       providers (
         id,
         name,
@@ -43,7 +50,7 @@ export default async function ModelPage({
 
   const { data: reviews } = await supabase
     .from("reviews")
-    .select("model_id, comment_id, author_name, rating, content, created_at")
+    .select("model_id, comment_id, user_id, author_name, rating, content, created_at")
     .eq("model_id", model.id)
     .order("created_at", { ascending: false });
 
@@ -60,6 +67,10 @@ export default async function ModelPage({
 
   const provider = modelDetail.providers;
   const company = provider?.companies;
+  const reviewsWithOwnership = (reviews ?? []).map((review) => ({
+    ...review,
+    isOwner: Boolean(user?.id && review.user_id === user.id),
+  })) as ReviewWithOwnership[];
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -87,12 +98,13 @@ export default async function ModelPage({
           {modelDetail.name}
         </h1>
         <div className="flex flex-wrap items-center gap-4 text-zinc-600 dark:text-zinc-400">
-          {provider?.avg_rating != null && (
+          {modelDetail.avg_rating != null && (
             <span className="flex items-center gap-1">
               <span className="text-amber-500">★</span>
-              {Number(provider.avg_rating).toFixed(1)} rating
+              {Number(modelDetail.avg_rating).toFixed(1)} model rating
             </span>
           )}
+          <span>{modelDetail.total_reviews ?? 0} reviews</span>
           {company?.website && (
             <a
               href={company.website}
@@ -155,35 +167,8 @@ export default async function ModelPage({
         </Link>
       </section>
 
-      {modelDetail.reviews.length > 0 && (
-        <section className="mb-10">
-          <h2 className="mb-4 text-lg font-semibold">Reviews</h2>
-          <div className="space-y-4">
-            {modelDetail.reviews.map((r) => (
-              <div
-                key={r.comment_id}
-                className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
-              >
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="flex text-amber-500">
-                    {"★".repeat(r.rating)}
-                    {"☆".repeat(5 - r.rating)}
-                  </span>
-                  <span className="text-sm font-medium">
-                    {r.author_name ?? "Anonymous"}
-                  </span>
-                  <span className="text-sm text-zinc-500">
-                    {new Date(r.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                {r.content && (
-                  <p className="text-zinc-600 dark:text-zinc-400">{r.content}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <ReviewForm modelSlug={modelDetail.slug} />
+      <ReviewList modelSlug={modelDetail.slug} reviews={reviewsWithOwnership} />
 
       <div className="pt-4">
         <Link

@@ -6,6 +6,7 @@ import { useState } from "react";
 import Link from "next/link";
 
 export default function SignupPage() {
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -18,11 +19,21 @@ export default function SignupPage() {
     setError(null);
     setLoading(true);
 
+    const normalizedFullName = fullName.trim();
+    if (normalizedFullName.length < 2) {
+      setLoading(false);
+      setError("Full name must be at least 2 characters.");
+      return;
+    }
+
     const supabase = createClient();
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        data: {
+          display_name: normalizedFullName,
+        },
         emailRedirectTo: `${location.origin}/auth/callback?next=/`,
       },
     });
@@ -63,6 +74,21 @@ export default function SignupPage() {
       <div className="w-full max-w-sm space-y-6">
         <h1 className="text-2xl font-semibold tracking-tight">Create account</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="fullName" className="block text-sm font-medium mb-1">
+              Full name
+            </label>
+            <input
+              id="fullName"
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              minLength={2}
+              autoComplete="name"
+              className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+            />
+          </div>
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-1">
               Email
