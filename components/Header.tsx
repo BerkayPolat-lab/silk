@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/SignOutButton";
+import CartDrawer from "@/components/cart/CartDrawer";
 
 export async function Header() {
   const supabase = await createClient();
@@ -29,6 +30,7 @@ export async function Header() {
               >
                 Dashboard
               </Link>
+              <CartDrawer />
               <SignOutButton />
             </>
           ) : (
