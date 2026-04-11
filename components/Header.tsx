@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { kalshiDepositButtonClassName } from "@/lib/kalshiDepositButton";
 import { SignOutButton } from "@/components/SignOutButton";
-import CartDrawer from "@/components/cart/CartDrawer";
 
 export async function Header() {
   const supabase = await createClient();
@@ -30,7 +30,9 @@ export async function Header() {
               >
                 Dashboard
               </Link>
-              <CartDrawer />
+              <Link href="/billing/add-funds" className={kalshiDepositButtonClassName}>
+                Add funds
+              </Link>
               <SignOutButton />
             </>
           ) : (

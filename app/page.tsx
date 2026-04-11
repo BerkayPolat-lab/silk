@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Model } from "@/types";
-import AddToCartButton from "@/components/cart/AddToCartButton";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -27,7 +26,7 @@ export default async function HomePage() {
     )
     .order("rank_order", { ascending: true });
 
-  const modelList = (models ?? []) as Model[];
+  const modelList = (models ?? []) as unknown as Model[];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
@@ -81,19 +80,6 @@ export default async function HomePage() {
                   </div>
                 )}
               </Link>
-              {provider?.id && (
-                <div className="border-t border-zinc-100 px-6 py-3 dark:border-zinc-800">
-                  <AddToCartButton
-                    model={{
-                      id: model.id,
-                      slug: model.slug,
-                      name: model.name,
-                      providerId: provider.id,
-                      providerName: provider.name ?? "",
-                    }}
-                  />
-                </div>
-              )}
             </div>
           );
         })}
