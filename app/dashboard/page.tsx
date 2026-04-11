@@ -32,6 +32,10 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login");
 
+  const emailRaw = user.email?.trim() ?? "";
+  const emailInitial =
+    emailRaw.length > 0 ? emailRaw[0]!.toUpperCase() : "?";
+
   const { data: wallet } = await supabase
     .from("user_wallets")
     .select("balance_cents")
@@ -47,6 +51,14 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .eq("key_type", "platform")
     .maybeSingle();
+
+  const { data: byokKeys } = await supabase
+    .from("user_api_keys")
+    .select("id")
+    .eq("user_id", user.id)
+    .not("provider_id", "is", null);
+
+  const keyList = byokKeys ?? [];
 
   const { data: usageEvents } = await supabase
     .from("api_usage_events")
@@ -111,6 +123,9 @@ export default async function DashboardPage() {
   const usageList = [...usageByModel.values()].sort(
     (a, b) => new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime()
   );
+
+  const totalModels = usageList.length;
+  const totalRequests = usageList.reduce((acc, u) => acc + u.requestCount, 0);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">

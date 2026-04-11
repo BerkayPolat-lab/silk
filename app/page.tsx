@@ -28,6 +28,15 @@ export default async function HomePage() {
 
   const modelList = (models ?? []) as unknown as Model[];
 
+  const uniqueProviders = new Set(
+    modelList
+      .map((m) => {
+        const p = m.providers as { id?: string } | null;
+        return p?.id;
+      })
+      .filter((id): id is string => Boolean(id))
+  ).size;
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       {/* Hero */}
@@ -125,21 +134,6 @@ export default async function HomePage() {
                     </div>
                   )}
                 </Link>
-
-                {/* Cart action */}
-                {provider?.id && (
-                  <div className="border-t border-zinc-100 px-5 py-3 dark:border-zinc-800">
-                    <AddToCartButton
-                      model={{
-                        id: model.id,
-                        slug: model.slug,
-                        name: model.name,
-                        providerId: provider.id,
-                        providerName: provider.name ?? "",
-                      }}
-                    />
-                  </div>
-                )}
               </div>
             );
           })}
