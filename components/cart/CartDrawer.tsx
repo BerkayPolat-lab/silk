@@ -299,7 +299,7 @@ export default function CartDrawer() {
                         onChange={(e) =>
                           handleKeyChange(group.providerId, e.target.value)
                         }
-                        className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 font-mono text-sm placeholder-zinc-400 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 font-mono text-sm text-zinc-900 transition-colors placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/5 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500 dark:focus:ring-zinc-100/5"
                       />
                       <p className="mt-1 text-xs text-zinc-400">
                         Stored securely as a hash. The raw key is never saved.
