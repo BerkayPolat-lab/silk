@@ -15,6 +15,15 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
+function StatCard({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-white px-5 py-4 dark:border-zinc-800 dark:bg-zinc-900">
+      <p className="text-2xl font-bold tabular-nums">{value}</p>
+      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
+    </div>
+  );
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -105,8 +114,24 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="mb-1 text-2xl font-bold">Dashboard</h1>
-      <p className="mb-8 text-sm text-zinc-500 dark:text-zinc-400">{user.email}</p>
+
+      {/* Header */}
+      <div className="mb-8 flex items-center gap-3 border-b border-zinc-100 pb-6 dark:border-zinc-800">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900">
+          {emailInitial}
+        </span>
+        <div>
+          <h1 className="text-xl font-bold leading-tight text-zinc-900 dark:text-zinc-100">Dashboard</h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">{user.email}</p>
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div className="mb-8 grid grid-cols-3 gap-3">
+        <StatCard label="Provider Keys" value={keyList.length} />
+        <StatCard label="Models Accessible" value={totalModels} />
+        <StatCard label="Sandbox Requests" value={totalRequests} />
+      </div>
 
       {/* ------------------------------------------------------------------ */}
       {/* Billing & platform API                                               */}
@@ -144,44 +169,46 @@ export default async function DashboardPage() {
       {/* ------------------------------------------------------------------ */}
       {/* Sandbox Usage                                                        */}
       {/* ------------------------------------------------------------------ */}
-      <section className="mb-10">
-        <h2 className="mb-1 text-lg font-semibold">Sandbox Usage</h2>
-        <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-          Models you&apos;ve tested in the sandbox, sorted by most recent activity.
-        </p>
+      <section className="mb-8">
+        <div className="mb-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Sandbox Usage</h2>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            Models you&apos;ve tested in the sandbox, sorted by most recent activity.
+          </p>
+        </div>
 
         {usageList.length === 0 ? (
-          <div className="rounded-lg border border-zinc-200 px-4 py-6 text-center dark:border-zinc-800">
+          <div className="rounded-xl border border-dashed border-zinc-200 px-6 py-8 text-center dark:border-zinc-800">
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               No sandbox usage yet.
             </p>
             <Link
               href="/"
-              className="mt-3 inline-block text-sm font-medium underline underline-offset-2"
+              className="mt-3 inline-block text-sm font-medium underline underline-offset-2 hover:text-zinc-600"
             >
               Try a model in the sandbox →
             </Link>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+          <div className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
             <table className="w-full text-sm">
-              <thead className="bg-zinc-50 dark:bg-zinc-900">
+              <thead className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-zinc-600 dark:text-zinc-400">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                     Model
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-zinc-600 dark:text-zinc-400">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                     Provider
                   </th>
-                  <th className="px-4 py-3 text-right font-medium text-zinc-600 dark:text-zinc-400">
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                     Requests
                   </th>
-                  <th className="px-4 py-3 text-right font-medium text-zinc-600 dark:text-zinc-400">
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                     Last Used
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {usageList.map((u, idx) => {
                   const model = Array.isArray(u.model) ? u.model[0] : u.model;
                   const provider = model
@@ -198,7 +225,7 @@ export default async function DashboardPage() {
                   return (
                     <tr
                       key={idx}
-                      className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
+                      className="bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800/50"
                     >
                       <td className="px-4 py-3">
                         {model ? (
@@ -212,7 +239,7 @@ export default async function DashboardPage() {
                           <span className="text-zinc-400">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                      <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400">
                         {company?.name ?? provider?.name ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-medium">
@@ -232,7 +259,7 @@ export default async function DashboardPage() {
 
       <Link
         href="/"
-        className="text-sm text-zinc-600 hover:underline dark:text-zinc-400"
+        className="text-sm text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
       >
         ← Back to Marketplace
       </Link>
