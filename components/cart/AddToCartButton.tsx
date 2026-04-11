@@ -44,7 +44,7 @@ export default function AddToCartButton({ model, initiallyOwned = false }: Props
 
   if (owned) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+      <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
         ✓ Access Granted
       </span>
     );
@@ -54,9 +54,9 @@ export default function AddToCartButton({ model, initiallyOwned = false }: Props
     return (
       <button
         onClick={() => removeItem(model.id)}
-        className="inline-flex items-center gap-1.5 rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:border-red-300 hover:text-red-600 dark:border-zinc-600 dark:text-zinc-300"
+        className="inline-flex items-center gap-1.5 rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-600 hover:border-red-300 hover:text-red-600 dark:border-zinc-600 dark:text-zinc-300 dark:hover:border-red-700 dark:hover:text-red-400"
       >
-        ✕ Remove from Cart
+        ✕ Remove
       </button>
     );
   }
@@ -64,9 +64,9 @@ export default function AddToCartButton({ model, initiallyOwned = false }: Props
   return (
     <button
       onClick={() => addItem(model)}
-      className="inline-flex items-center gap-1.5 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+      className="inline-flex items-center gap-1.5 rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 hover:border-zinc-700 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300 dark:hover:border-zinc-300"
     >
-      Get Access
+      + Get Access
     </button>
   );
 }
