@@ -4,22 +4,22 @@ overview: "Replace the current BYOK cart/checkout with a prepaid credit model: u
 todos:
   - id: db-wallet-pricing
     content: "Add migration: user_wallets, billing_transactions, model pricing columns, SECURITY DEFINER credit/debit RPCs + RLS (key_type + api_usage_events done in 00009)"
-    status: completed
+    status: pending
   - id: stripe-topup
     content: Add Stripe SDK, POST /api/billing/checkout, POST /api/webhooks/stripe with idempotent credit; update .env.example
-    status: completed
+    status: pending
   - id: platform-keys-ui
     content: Replace BYOK cart/purchases with billing UI; POST /api/keys to mint platform key once; update dashboard
-    status: completed
+    status: pending
   - id: post-payment-key-flow
     content: "Stripe success/callback + gating: credit wallet via webhook first; then allow key mint; document external app usage (Bearer, base URL, OpenAI-compatible body)"
-    status: pending
+    status: completed
   - id: metered-gateway
     content: "Add authenticated /api/v1/chat/completions (or equivalent): validate key, allowlist model, forward to LiteLLM, parse usage, atomic debit"
-    status: pending
+    status: completed
   - id: sandbox-policy
     content: "Decide: meter sandbox same as prod or env-gated free; align sandbox route or document"
-    status: pending
+    status: completed
   - id: dashboard-usage
     content: "Dashboard: balance, transactions; per-model usage from api_usage_events (partially done — usage table)"
     status: pending
@@ -169,14 +169,14 @@ Content-Type: application/json
 
 ### 6) Relationship to this repo today
 
-- Metered **`POST /api/v1/chat/completions`** and Stripe flows are **not implemented yet**; this section is the target behavior once those todos are done.
+- Metered **`POST /api/v1/chat/completions`** is implemented ([`app/api/v1/chat/completions/route.ts`](app/api/v1/chat/completions/route.ts)) with `debit_usage_and_log` ([`00012_metered_gateway_pricing_and_debit.sql`](supabase/migrations/00012_metered_gateway_pricing_and_debit.sql)). Stripe checkout + webhook flows are implemented separately.
 
 ---
 
 ## Current baseline (code)
 
 - Cart + [`app/api/purchases/route.ts`](app/api/purchases/route.ts): BYOK; no Stripe.
-- [`app/api/sandbox/chat/route.ts`](app/api/sandbox/chat/route.ts): session sandbox; no balance metering; **does not yet** insert `api_usage_events`.
+- [`app/api/sandbox/chat/route.ts`](app/api/sandbox/chat/route.ts): session sandbox; **metered** like prod; requires a **platform** `user_api_keys` row (`debit_usage_and_log` rejects NULL `api_key_id`; see [`00014_debit_usage_require_platform_key.sql`](supabase/migrations/00014_debit_usage_require_platform_key.sql)).
 - Product direction: **replace BYOK** with prepaid + platform key.
 
 ---
@@ -206,9 +206,9 @@ Ledger for usage remains **`api_usage_events`** only.
 
 ### 4) Metered gateway
 
-- `POST /api/v1/chat/completions` (or equivalent): Bearer platform key → validate → balance check → LiteLLM → parse `usage` → insert **`api_usage_events`** (`live`) → debit wallet.
+- ~~`POST /api/v1/chat/completions`~~ — **done:** Bearer platform key → validate → balance check → LiteLLM → parse `usage` → **`api_usage_events`** (`live`) + **`debit_usage_and_log`**.
 
-**Sandbox:** free vs metered — document or env-flag.
+**Sandbox:** metered (same wallet + ledger); user must have minted a **platform** key (sandbox resolves `user_api_keys.id` for debits).
 
 ### 5) Dashboard
 
@@ -227,5 +227,5 @@ Ledger for usage remains **`api_usage_events`** only.
 2. Wallet + `billing_transactions` + model pricing columns + RPCs.
 3. Stripe checkout + webhook + `.env.example`.
 4. Platform key issuance + remove BYOK cart.
-5. Billable proxy + live `api_usage_events` + debit.
+5. ~~Billable proxy + live `api_usage_events` + debit.~~ — done.
 6. Dashboard balance + enriched usage.

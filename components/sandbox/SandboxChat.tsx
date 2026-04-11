@@ -68,7 +68,14 @@ export function SandboxChat({ modelSlug }: { modelSlug: string }) {
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        throw new Error(text || `Request failed with ${res.status}`);
+        let message = text || `Request failed with ${res.status}`;
+        try {
+          const j = JSON.parse(text) as { error?: unknown };
+          if (typeof j.error === "string") message = j.error;
+        } catch {
+          /* keep raw */
+        }
+        throw new Error(message);
       }
 
       // Server streams SSE from LiteLLM. Parse OpenAI-style stream events:
