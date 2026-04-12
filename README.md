@@ -2,7 +2,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Silk - An Online Marketplace
 
-Silk, an online marketplace for AI agents and LLM APIs, is built and maintained by Berkay Polat, Nikhil Osuri, Sawyer Spector, Val Kasabrukhau and Sulaiman Khydyr.
+Silk, an online marketplace for AI agents and LLM APIs, is built and maintained by Berkay Polat, Nikhil Osuri, Sawyer Spector, and Sarva Anbarasu.
 
 ## Getting Started
 
