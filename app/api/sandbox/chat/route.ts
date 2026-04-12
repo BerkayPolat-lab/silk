@@ -1,4 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import {
+  debitUsage,
+  estimateMaxCostCents,
+  roughPromptTokensFromMessages,
+  usageCostCents,
+  wrapStreamWithUsageDebit,
+} from "@/lib/billing/meteredUsage";
 
 type ChatRole = "user" | "assistant" | "system";
 
@@ -10,6 +17,13 @@ type IncomingMessage = {
 type Body = {
   modelSlug: string;
   messages: IncomingMessage[];
+};
+
+type ModelRow = {
+  id: string;
+  litellm_model_id: string;
+  input_price_per_million_cents: number;
+  output_price_per_million_cents: number;
 };
 
 // Simple in-memory rate limit for development/testing.
@@ -75,7 +89,6 @@ export async function POST(request: Request) {
     });
   }
 
-  // Validate and normalize messages.
   const normalized: Array<{ role: ChatRole; content: string }> = [];
   for (const m of body.messages) {
     if (!m || typeof m.content !== "string") continue;
@@ -83,7 +96,6 @@ export async function POST(request: Request) {
     if (role !== "user" && role !== "assistant" && role !== "system") continue;
     const content = m.content.trim();
     if (!content) continue;
-    // Hard caps to reduce spend + abuse.
     if (content.length > 4000) continue;
     normalized.push({ role, content });
   }
@@ -96,21 +108,46 @@ export async function POST(request: Request) {
   }
 
   if (normalized.reduce((acc, m) => acc + m.content.length, 0) > 32_000) {
+    return new Response(JSON.stringify({ error: "Prompt too large" }), {
+      status: 413,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // Use the same session-scoped client as the dashboard. Service-role reads can
+  // return no rows if SUPABASE_SERVICE_ROLE_KEY is missing/mismatched vs the anon URL.
+  const { data: platformKey, error: keyErr } = await supabase
+    .from("user_api_keys")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("key_type", "platform")
+    .maybeSingle();
+
+  if (keyErr) {
+    return new Response(JSON.stringify({ error: "Could not verify API key" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  if (!platformKey?.id) {
     return new Response(
-      JSON.stringify({ error: "Prompt too large" }),
-      {
-        status: 413,
-        headers: { "Content-Type": "application/json" },
-      }
+      JSON.stringify({
+        error:
+          "Create a Silk platform API key in the dashboard (and add funds) before using the sandbox.",
+        code: "PLATFORM_KEY_REQUIRED",
+      }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
     );
   }
 
-  // Allowlist model: ignore any client-provided LiteLLM model id.
   const { data: model, error: modelError } = await supabase
     .from("models")
-    .select("id, slug, litellm_model_id")
+    .select(
+      "id, litellm_model_id, input_price_per_million_cents, output_price_per_million_cents"
+    )
     .eq("slug", body.modelSlug)
-    .single();
+    .maybeSingle();
 
   if (modelError || !model?.litellm_model_id) {
     return new Response(JSON.stringify({ error: "Model not found" }), {
@@ -119,8 +156,45 @@ export async function POST(request: Request) {
     });
   }
 
+  const mRow = model as ModelRow;
+  const inPpm = Number(mRow.input_price_per_million_cents) || 0;
+  const outPpm = Number(mRow.output_price_per_million_cents) || 0;
+
+  const maxCap = Number(process.env.GATEWAY_MAX_TOKENS ?? 8192);
+  let maxTokens = Number(process.env.SANDBOX_MAX_TOKENS ?? 512);
+  if (!Number.isFinite(maxTokens) || maxTokens < 1) maxTokens = 512;
+  maxTokens = Math.min(Math.floor(maxTokens), maxCap);
+
+  const { data: wallet, error: walletErr } = await supabase
+    .from("user_wallets")
+    .select("balance_cents")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (walletErr) {
+    return new Response(JSON.stringify({ error: "Could not load wallet" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const balance = Number(wallet?.balance_cents ?? 0);
+  const promptEst = roughPromptTokensFromMessages(normalized as unknown[]);
+  const estCost = estimateMaxCostCents(promptEst, maxTokens, inPpm, outPpm);
+
+  if (!Number.isFinite(balance) || balance <= 0 || balance < estCost) {
+    return new Response(
+      JSON.stringify({
+        error:
+          "Insufficient prepaid balance for this request. Add funds in the Silk billing page.",
+        code: "INSUFFICIENT_FUNDS",
+      }),
+      { status: 402, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   const proxyUrl = process.env.LITELLM_PROXY_URL ?? "http://localhost:4000";
-  const serviceKey = process.env.LITELLM_SERVICE_API_KEY; // optional
+  const serviceKey = process.env.LITELLM_SERVICE_API_KEY;
 
   const liteRes = await fetch(`${proxyUrl}/v1/chat/completions`, {
     method: "POST",
@@ -129,15 +203,15 @@ export async function POST(request: Request) {
       ...(serviceKey ? { Authorization: `Bearer ${serviceKey}` } : {}),
     },
     body: JSON.stringify({
-      // Route requests through LiteLLM's OpenRouter provider.
-      model: `openrouter/${model.litellm_model_id}`,
-      messages: normalized.map((m) => ({
-        role: m.role,
-        content: m.content,
+      model: `openrouter/${mRow.litellm_model_id}`,
+      messages: normalized.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
       })),
       temperature: 0.7,
       stream: true,
-      max_tokens: Number(process.env.SANDBOX_MAX_TOKENS ?? 512),
+      stream_options: { include_usage: true },
+      max_tokens: maxTokens,
     }),
   });
 
@@ -152,8 +226,27 @@ export async function POST(request: Request) {
     );
   }
 
-  // Pass-through SSE from LiteLLM to the browser.
-  return new Response(liteRes.body, {
+  const userId = user.id;
+  const modelId = mRow.id;
+  const apiKeyId = platformKey.id;
+
+  const outStream = wrapStreamWithUsageDebit(liteRes.body, async (usage) => {
+    let pt = Math.max(0, usage.prompt_tokens);
+    let ct = Math.max(0, usage.completion_tokens);
+    if (pt === 0 && ct === 0) {
+      pt = roughPromptTokensFromMessages(normalized as unknown[]);
+      ct = Math.min(maxTokens, 256);
+    }
+    const cost = usageCostCents(pt, ct, inPpm, outPpm);
+    const ok = await debitUsage(userId, modelId, apiKeyId, pt, ct, cost);
+    if (!ok) {
+      console.error(
+        "sandbox chat: debit failed after streamed response (user may need to add funds)"
+      );
+    }
+  });
+
+  return new Response(outStream, {
     headers: {
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
@@ -161,4 +254,3 @@ export async function POST(request: Request) {
     },
   });
 }
-

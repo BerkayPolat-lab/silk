@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import type { ModelDetail, Review, ReviewWithOwnership } from "@/types";
 import ReviewForm from "@/components/reviews/ReviewForm";
 import ReviewList from "@/components/reviews/ReviewList";
-import AddToCartButton from "@/components/cart/AddToCartButton";
 
 export default async function ModelPage({
   params,
@@ -138,19 +137,6 @@ export default async function ModelPage({
             </a>
           )}
         </div>
-
-        {/* Cart button */}
-        {provider?.id && (
-          <AddToCartButton
-            model={{
-              id: modelDetail.id,
-              slug: modelDetail.slug,
-              name: modelDetail.name,
-              providerId: provider.id,
-              providerName: provider.name ?? "",
-            }}
-          />
-        )}
       </div>
 
       {/* Overview */}
