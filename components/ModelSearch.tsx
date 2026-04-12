@@ -140,8 +140,8 @@ function SegmentedPicker({
           onClick={() => onChange(opt.value)}
           className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
             value === opt.value
-              ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-              : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+              ? "bg-zinc-200 text-zinc-900"
+              : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
           }`}
         >
           {opt.label}
@@ -166,7 +166,7 @@ function StyledSelect({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onMouseDown={(e) => e.stopPropagation()} // keep popover open
-        className="w-full appearance-none rounded-lg border border-zinc-200 bg-white py-1.5 pl-3 pr-7 text-sm text-zinc-700 transition-colors focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+        className="w-full appearance-none rounded-lg border border-zinc-700 bg-zinc-800 py-1.5 pl-3 pr-7 text-sm text-zinc-200 transition-colors focus:border-zinc-500 focus:outline-none"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -239,12 +239,12 @@ function FilterPopover({
   const [showMore, setShowMore] = useState(false);
 
   return (
-    <div className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 shadow-lg dark:border-zinc-800 dark:bg-zinc-900/95">
+    <div className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-xl">
       <div className="p-6">
         {/* Basic filters */}
         <div className="space-y-4">
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
               Min rating
             </p>
             <SegmentedPicker
@@ -255,7 +255,7 @@ function FilterPopover({
           </div>
 
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
               Min reviews
             </p>
             <SegmentedPicker
@@ -271,7 +271,7 @@ function FilterPopover({
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setShowMore((v) => !v)}
-          className="mt-4 flex w-full items-center gap-1.5 text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-600 dark:hover:text-zinc-300"
+          className="mt-4 flex w-full items-center gap-1.5 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-300"
         >
           <svg
             className={`h-3 w-3 transition-transform ${showMore ? "rotate-180" : ""}`}
@@ -287,9 +287,9 @@ function FilterPopover({
 
         {/* Extended filters */}
         {showMore && (
-          <div className="mt-4 space-y-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+          <div className="mt-4 space-y-4 border-t border-zinc-800 pt-4">
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Max input price
               </p>
               <StyledSelect
@@ -299,7 +299,7 @@ function FilterPopover({
               />
             </div>
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Max output price
               </p>
               <StyledSelect
@@ -314,15 +314,15 @@ function FilterPopover({
 
       {/* Footer */}
       {activeCount > 0 && (
-        <div className="flex items-center justify-between border-t border-zinc-100 px-4 py-2.5 dark:border-zinc-800">
-          <span className="text-xs text-zinc-400 dark:text-zinc-500">
+        <div className="flex items-center justify-between border-t border-zinc-800 px-4 py-2.5">
+          <span className="text-xs text-zinc-500">
             {activeCount} filter{activeCount !== 1 ? "s" : ""} active
           </span>
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={onClearFilters}
-            className="text-xs font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-100"
           >
             Clear all
           </button>

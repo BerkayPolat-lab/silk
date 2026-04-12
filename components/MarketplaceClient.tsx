@@ -73,6 +73,9 @@ function CompareTable({ a, b }: { a: ModelSearchResult; b: ModelSearchResult }) 
             const displayA = row.format ? row.format(valA) : (valA == null || valA === "" ? "—" : String(valA));
             const displayB = row.format ? row.format(valB) : (valB == null || valB === "" ? "—" : String(valB));
 
+            // Hide rows where neither model has real data
+            if (displayA === "—" && displayB === "—") return null;
+
             let aWins = false;
             let bWins = false;
             if (row.direction !== "none" && valA != null && valB != null) {
@@ -271,7 +274,7 @@ function ModelCombobox({
         <ul
           ref={listRef}
           role="listbox"
-          className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-64 overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-950 py-1 shadow-xl"
+          className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-64 overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-900 py-1 shadow-xl"
         >
           {filtered.length === 0 ? (
             <li className="px-4 py-3 text-sm text-zinc-500">No models found.</li>
