@@ -19,6 +19,12 @@ export type Model = {
   rank_order: number | null;
   avg_rating?: number;
   total_reviews?: number;
+  type_of_ai?: string | null;
+  parameters?: string | null;
+  layers?: number | null;
+  gb_size?: number | null;
+  input_price_per_million_cents?: number | null;
+  output_price_per_million_cents?: number | null;
   providers: Provider | null;
 };
 
