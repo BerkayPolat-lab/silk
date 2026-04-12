@@ -240,9 +240,9 @@ function FilterPopover({
 
   return (
     <div className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-xl">
-      <div className="p-6">
+      <div className="p-10">
         {/* Basic filters */}
-        <div className="space-y-4">
+        <div className="space-y-7">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
               Min rating
