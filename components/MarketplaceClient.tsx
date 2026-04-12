@@ -41,21 +41,21 @@ function ModelColumnHeader({ model }: { model: ModelSearchResult }) {
       {provider !== "—" && (
         <div className="flex items-center gap-1.5">
           <ProviderLogo name={provider} logoUrl={resolveLogoUrl(model)} size={14} />
-          <span className="text-xs font-normal text-zinc-400 dark:text-zinc-500">{provider}</span>
+          <span className="text-xs font-normal text-zinc-500">{provider}</span>
         </div>
       )}
-      <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{model.name}</span>
+      <span className="text-sm font-semibold text-zinc-100">{model.name}</span>
     </div>
   );
 }
 
 function CompareTable({ a, b }: { a: ModelSearchResult; b: ModelSearchResult }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
+    <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/60">
-            <th className="w-36 py-3.5 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+          <tr className="border-b border-zinc-800 bg-zinc-900">
+            <th className="w-36 py-3.5 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
               Field
             </th>
             <th className="px-4 py-3 text-left">
@@ -67,11 +67,14 @@ function CompareTable({ a, b }: { a: ModelSearchResult; b: ModelSearchResult }) 
           </tr>
         </thead>
         <tbody>
-          {ROWS.map((row, i) => {
+          {ROWS.map((row) => {
             const valA = row.getValue(a);
             const valB = row.getValue(b);
             const displayA = row.format ? row.format(valA) : (valA == null || valA === "" ? "—" : String(valA));
             const displayB = row.format ? row.format(valB) : (valB == null || valB === "" ? "—" : String(valB));
+
+            // Hide rows where neither model has real data
+            if (displayA === "—" && displayB === "—") return null;
 
             let aWins = false;
             let bWins = false;
@@ -84,20 +87,16 @@ function CompareTable({ a, b }: { a: ModelSearchResult; b: ModelSearchResult }) 
               }
             }
 
-            const rowBg = i % 2 === 0
-              ? "bg-white dark:bg-zinc-900"
-              : "bg-zinc-50 dark:bg-zinc-800/40";
-
             return (
-              <tr key={row.label} className={`border-b border-zinc-100 last:border-0 dark:border-zinc-800 ${rowBg}`}>
-                <td className="whitespace-nowrap py-3 pl-4 pr-3 text-xs font-medium text-zinc-400 dark:text-zinc-500">
+              <tr key={row.label} className="border-b border-zinc-800 bg-zinc-900 last:border-0">
+                <td className="whitespace-nowrap py-3 pl-4 pr-3 text-xs font-medium text-zinc-500">
                   {row.label}
                 </td>
-                <td className={`px-4 py-3 ${aWins ? "font-semibold text-emerald-600 dark:text-emerald-400" : "text-zinc-700 dark:text-zinc-300"}`}>
+                <td className={`px-4 py-3 ${aWins ? "font-semibold text-emerald-400" : "text-zinc-300"}`}>
                   {displayA}
                   {aWins && <span className="ml-1 text-xs text-emerald-500">▲</span>}
                 </td>
-                <td className={`px-4 py-3 ${bWins ? "font-semibold text-emerald-600 dark:text-emerald-400" : "text-zinc-700 dark:text-zinc-300"}`}>
+                <td className={`px-4 py-3 ${bWins ? "font-semibold text-emerald-400" : "text-zinc-300"}`}>
                   {displayB}
                   {bWins && <span className="ml-1 text-xs text-emerald-500">▲</span>}
                 </td>
@@ -213,12 +212,14 @@ function ModelCombobox({
 
   return (
     <div ref={containerRef} className="relative">
-      {/* Input */}
+      {/* Input box */}
       <div
-        className={`flex cursor-text items-center gap-2 rounded-xl border bg-white px-3 py-2.5 transition-colors dark:bg-zinc-800 ${
+        className={`flex cursor-text items-center gap-2 rounded-xl border bg-zinc-900 px-3 py-2.5 transition-colors ${
           open
-            ? "border-zinc-400 dark:border-zinc-500"
-            : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600"
+            ? "border-zinc-500"
+            : selectedModel
+            ? "border-zinc-600 hover:border-zinc-500"
+            : "border-zinc-800 hover:border-zinc-700"
         }`}
         onClick={() => { setOpen(true); inputRef.current?.focus(); }}
       >
@@ -235,7 +236,7 @@ function ModelCombobox({
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="flex-1 bg-transparent text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+          className="flex-1 bg-transparent text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
           role="combobox"
           aria-expanded={open}
           aria-autocomplete="list"
@@ -247,7 +248,7 @@ function ModelCombobox({
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={clear}
-            className="shrink-0 rounded p-0.5 text-zinc-400 transition-colors hover:text-zinc-600 dark:hover:text-zinc-300"
+            className="shrink-0 rounded p-0.5 text-zinc-600 transition-colors hover:text-zinc-400"
             aria-label="Clear selection"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -258,7 +259,7 @@ function ModelCombobox({
 
         {/* Chevron */}
         <svg
-          className={`h-4 w-4 shrink-0 text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`h-4 w-4 shrink-0 text-zinc-600 transition-transform ${open ? "rotate-180" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -273,10 +274,10 @@ function ModelCombobox({
         <ul
           ref={listRef}
           role="listbox"
-          className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-64 overflow-y-auto rounded-xl border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800"
+          className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-64 overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-900 py-1 shadow-xl"
         >
           {filtered.length === 0 ? (
-            <li className="px-4 py-3 text-sm text-zinc-400 dark:text-zinc-500">No models found.</li>
+            <li className="px-4 py-3 text-sm text-zinc-500">No models found.</li>
           ) : (
             filtered.map((model, idx) => {
               const provider = resolveProviderName(model);
@@ -291,22 +292,20 @@ function ModelCombobox({
                   onClick={() => select(model)}
                   onMouseEnter={() => setActiveIndex(idx)}
                   className={`flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors ${
-                    isActive
-                      ? "bg-zinc-50 dark:bg-zinc-700/60"
-                      : "hover:bg-zinc-50 dark:hover:bg-zinc-700/40"
-                  } ${isSelected ? "opacity-50" : ""}`}
+                    isActive ? "bg-zinc-800/70" : ""
+                  } ${isSelected ? "opacity-40" : ""}`}
                 >
                   <ProviderLogo name={provider} logoUrl={resolveLogoUrl(model)} size={18} className="shrink-0" />
                   <div className="min-w-0 flex-1">
                     {provider !== "—" && (
-                      <p className="truncate text-xs text-zinc-400 dark:text-zinc-500">{provider}</p>
+                      <p className="truncate text-xs text-zinc-500">{provider}</p>
                     )}
-                    <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    <p className="truncate text-sm font-medium text-zinc-100">
                       {model.name}
                     </p>
                   </div>
                   {isSelected && (
-                    <svg className="h-4 w-4 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <svg className="h-4 w-4 shrink-0 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   )}
