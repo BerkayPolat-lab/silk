@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { formatContextTokens, formatLatencyMs, formatThroughputTps } from "@/lib/model-metadata-format";
 
 // ── Provider utilities (exported for reuse) ───────────────────────────────────
 
@@ -103,8 +104,12 @@ export type ModelSearchResult = {
   output_price_per_million_cents: number;
   type_of_ai: string | null;
   parameters: string | null;
-  layers: number | null;
   gb_size: number | null;
+  context_length_tokens: number | null;
+  latency_ttft_ms: number | null;
+  throughput_tokens_per_sec: number | null;
+  perf_source: string | null;
+  perf_updated_at: string | null;
   providers: {
     name: string;
     companies: { logo_url: string | null } | null;
@@ -117,6 +122,9 @@ type Filters = {
   minReviews: string;
   maxInputPrice: string;
   maxOutputPrice: string;
+  maxLatencyMs: string;
+  minThroughputTps: string;
+  minContextLength: string;
 };
 
 // ── Filter sub-components ─────────────────────────────────────────────────────
@@ -140,8 +148,8 @@ function SegmentedPicker({
           onClick={() => onChange(opt.value)}
           className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
             value === opt.value
-              ? "bg-zinc-200 text-zinc-900"
-              : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+              ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+              : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-800 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
           }`}
         >
           {opt.label}
@@ -165,8 +173,7 @@ function StyledSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onMouseDown={(e) => e.stopPropagation()} // keep popover open
-        className="w-full appearance-none rounded-lg border border-zinc-700 bg-zinc-800 py-1.5 pl-3 pr-7 text-sm text-zinc-200 transition-colors focus:border-zinc-500 focus:outline-none"
+        className="w-full appearance-none rounded-lg border border-zinc-200 bg-white py-1.5 pl-3 pr-7 text-sm text-zinc-700 transition-colors focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:focus:border-zinc-500"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -175,7 +182,7 @@ function StyledSelect({
         ))}
       </select>
       <svg
-        className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
+        className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400 dark:text-zinc-500"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -187,7 +194,7 @@ function StyledSelect({
   );
 }
 
-// ── Filter popover ────────────────────────────────────────────────────────────
+// ── Filter sidebar ────────────────────────────────────────────────────────────
 
 const RATING_OPTIONS = [
   { label: "Any", value: "" },
@@ -225,7 +232,31 @@ const OUTPUT_PRICE_OPTIONS = [
   { label: "≤ $50/1M", value: "5000" },
 ];
 
-function FilterPopover({
+const LATENCY_OPTIONS = [
+  { label: "Any latency", value: "" },
+  { label: "≤ 250 ms", value: "250" },
+  { label: "≤ 500 ms", value: "500" },
+  { label: "≤ 1,000 ms", value: "1000" },
+  { label: "≤ 2,000 ms", value: "2000" },
+];
+
+const THROUGHPUT_OPTIONS = [
+  { label: "Any throughput", value: "" },
+  { label: "≥ 10 tok/s", value: "10" },
+  { label: "≥ 25 tok/s", value: "25" },
+  { label: "≥ 50 tok/s", value: "50" },
+  { label: "≥ 100 tok/s", value: "100" },
+];
+
+const CONTEXT_OPTIONS = [
+  { label: "Any context", value: "" },
+  { label: "≥ 8k", value: "8000" },
+  { label: "≥ 32k", value: "32000" },
+  { label: "≥ 128k", value: "128000" },
+  { label: "≥ 1M", value: "1000000" },
+];
+
+function FilterSidebar({
   filters,
   setFilter,
   onClearFilters,
@@ -236,99 +267,92 @@ function FilterPopover({
   onClearFilters: () => void;
   activeCount: number;
 }) {
-  const [showMore, setShowMore] = useState(false);
-
   return (
-    <div className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-xl">
-      <div className="p-10">
-        {/* Basic filters */}
-        <div className="space-y-7">
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Min rating
-            </p>
-            <SegmentedPicker
-              options={RATING_OPTIONS}
-              value={filters.minRating}
-              onChange={(v) => setFilter("minRating", v)}
-            />
-          </div>
-
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Min reviews
-            </p>
-            <SegmentedPicker
-              options={REVIEW_OPTIONS}
-              value={filters.minReviews}
-              onChange={(v) => setFilter("minReviews", v)}
-            />
-          </div>
-        </div>
-
-        {/* More filters toggle */}
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => setShowMore((v) => !v)}
-          className="mt-4 flex w-full items-center gap-1.5 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-300"
-        >
-          <svg
-            className={`h-3 w-3 transition-transform ${showMore ? "rotate-180" : ""}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2.5}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-          {showMore ? "Fewer filters" : "More filters"}
-        </button>
-
-        {/* Extended filters */}
-        {showMore && (
-          <div className="mt-4 space-y-4 border-t border-zinc-800 pt-4">
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Max input price
-              </p>
-              <StyledSelect
-                options={INPUT_PRICE_OPTIONS}
-                value={filters.maxInputPrice}
-                onChange={(v) => setFilter("maxInputPrice", v)}
-              />
-            </div>
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Max output price
-              </p>
-              <StyledSelect
-                options={OUTPUT_PRICE_OPTIONS}
-                value={filters.maxOutputPrice}
-                onChange={(v) => setFilter("maxOutputPrice", v)}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      {activeCount > 0 && (
-        <div className="flex items-center justify-between border-t border-zinc-800 px-4 py-2.5">
-          <span className="text-xs text-zinc-500">
-            {activeCount} filter{activeCount !== 1 ? "s" : ""} active
-          </span>
+    <aside className="sticky top-20 h-fit rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Filters</h3>
+        {activeCount > 0 && (
           <button
             type="button"
-            onMouseDown={(e) => e.preventDefault()}
             onClick={onClearFilters}
-            className="text-xs font-medium text-zinc-400 transition-colors hover:text-zinc-100"
+            className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
           >
             Clear all
           </button>
+        )}
+      </div>
+
+      <div className="space-y-6">
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Min rating
+          </p>
+          <SegmentedPicker
+            options={RATING_OPTIONS}
+            value={filters.minRating}
+            onChange={(v) => setFilter("minRating", v)}
+          />
         </div>
-      )}
-    </div>
+
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Min reviews
+          </p>
+          <SegmentedPicker
+            options={REVIEW_OPTIONS}
+            value={filters.minReviews}
+            onChange={(v) => setFilter("minReviews", v)}
+          />
+        </div>
+
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Max input price
+          </p>
+          <StyledSelect
+            options={INPUT_PRICE_OPTIONS}
+            value={filters.maxInputPrice}
+            onChange={(v) => setFilter("maxInputPrice", v)}
+          />
+        </div>
+
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Max output price
+          </p>
+          <StyledSelect
+            options={OUTPUT_PRICE_OPTIONS}
+            value={filters.maxOutputPrice}
+            onChange={(v) => setFilter("maxOutputPrice", v)}
+          />
+        </div>
+
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Max latency</p>
+          <StyledSelect options={LATENCY_OPTIONS} value={filters.maxLatencyMs} onChange={(v) => setFilter("maxLatencyMs", v)} />
+        </div>
+
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Min throughput
+          </p>
+          <StyledSelect
+            options={THROUGHPUT_OPTIONS}
+            value={filters.minThroughputTps}
+            onChange={(v) => setFilter("minThroughputTps", v)}
+          />
+        </div>
+
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Min context</p>
+          <StyledSelect
+            options={CONTEXT_OPTIONS}
+            value={filters.minContextLength}
+            onChange={(v) => setFilter("minContextLength", v)}
+          />
+        </div>
+      </div>
+    </aside>
   );
 }
 
@@ -371,39 +395,18 @@ export default function ModelSearch() {
     minReviews: "",
     maxInputPrice: "",
     maxOutputPrice: "",
+    maxLatencyMs: "",
+    minThroughputTps: "",
+    minContextLength: "",
   });
   const [results, setResults] = useState<ModelSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
 
   function setFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
     setFilters((prev) => ({ ...prev, [key]: value }));
   }
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    if (!dropdownOpen) return;
-    function handleOutside(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, [dropdownOpen]);
-
-  // Debounced fetch
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => void fetchResults(filters), 300);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters]);
 
   async function fetchResults(f: Filters) {
     setLoading(true);
@@ -414,7 +417,8 @@ export default function ModelSearch() {
       .select(
         `id, name, slug, avg_rating, total_reviews,
          input_price_per_million_cents, output_price_per_million_cents,
-         type_of_ai, parameters, layers, gb_size,
+         type_of_ai, parameters, gb_size,
+         context_length_tokens, latency_ttft_ms, throughput_tokens_per_sec, perf_source, perf_updated_at,
          providers ( name, companies ( logo_url ) )`
       )
       .order("rank_order", { ascending: true, nullsFirst: false });
@@ -424,16 +428,28 @@ export default function ModelSearch() {
     if (f.minReviews !== "") query = query.gte("total_reviews", Number(f.minReviews));
     if (f.maxInputPrice !== "") query = query.lte("input_price_per_million_cents", Number(f.maxInputPrice));
     if (f.maxOutputPrice !== "") query = query.lte("output_price_per_million_cents", Number(f.maxOutputPrice));
+    if (f.maxLatencyMs !== "") query = query.lte("latency_ttft_ms", Number(f.maxLatencyMs));
+    if (f.minThroughputTps !== "") query = query.gte("throughput_tokens_per_sec", Number(f.minThroughputTps));
+    if (f.minContextLength !== "") query = query.gte("context_length_tokens", Number(f.minContextLength));
 
     const { data, error: supabaseError } = await query;
     if (supabaseError) {
       setError(supabaseError.message);
       setResults([]);
     } else {
-      setResults((data ?? []) as ModelSearchResult[]);
+      setResults((data ?? []) as unknown as ModelSearchResult[]);
     }
     setLoading(false);
   }
+
+  // Debounced fetch
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => void fetchResults(filters), 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [filters]);
 
   function clearFilters() {
     setFilters((prev) => ({
@@ -442,6 +458,9 @@ export default function ModelSearch() {
       minReviews: "",
       maxInputPrice: "",
       maxOutputPrice: "",
+      maxLatencyMs: "",
+      minThroughputTps: "",
+      minContextLength: "",
     }));
   }
 
@@ -450,19 +469,22 @@ export default function ModelSearch() {
     filters.minReviews,
     filters.maxInputPrice,
     filters.maxOutputPrice,
+    filters.maxLatencyMs,
+    filters.minThroughputTps,
+    filters.minContextLength,
   ].filter(Boolean).length;
 
   return (
-    <div className="space-y-4">
-      {/* Search bar + filter popover */}
-      <div ref={wrapperRef} className="relative">
-        <div
-          className={`flex items-center gap-2 rounded-xl border bg-white px-3 py-2.5 shadow-sm transition-colors dark:bg-zinc-900 ${
-            dropdownOpen
-              ? "border-zinc-400 dark:border-zinc-500"
-              : "border-zinc-200 dark:border-zinc-800"
-          }`}
-        >
+    <div className="grid grid-cols-[260px,minmax(0,1fr)] gap-4">
+      <FilterSidebar
+        filters={filters}
+        setFilter={setFilter}
+        onClearFilters={clearFilters}
+        activeCount={activeFilterCount}
+      />
+
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 shadow-sm transition-colors dark:border-zinc-800 dark:bg-zinc-900">
           <svg
             className="h-4 w-4 shrink-0 text-zinc-400"
             fill="none"
@@ -481,38 +503,13 @@ export default function ModelSearch() {
             type="text"
             value={filters.query}
             onChange={(e) => setFilter("query", e.target.value)}
-            onFocus={() => setDropdownOpen(true)}
             placeholder="Search models..."
             className="flex-1 bg-transparent text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100 dark:placeholder:text-zinc-500"
           />
 
-          {/* Filter toggle button */}
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setDropdownOpen((v) => !v)}
-            className={`flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
-              dropdownOpen || activeFilterCount > 0
-                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
-            }`}
-          >
-            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h18M7 8h10M11 12h2M11 16h2" />
-            </svg>
-            Filters
-            {activeFilterCount > 0 && (
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-bold text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-
-          {/* Clear all (query + filters) */}
           {(filters.query || activeFilterCount > 0) && (
             <button
               type="button"
-              onMouseDown={(e) => e.preventDefault()}
               onClick={() =>
                 setFilters({
                   query: "",
@@ -520,6 +517,9 @@ export default function ModelSearch() {
                   minReviews: "",
                   maxInputPrice: "",
                   maxOutputPrice: "",
+                  maxLatencyMs: "",
+                  minThroughputTps: "",
+                  minContextLength: "",
                 })
               }
               className="shrink-0 text-xs text-zinc-400 transition-colors hover:text-zinc-600 dark:hover:text-zinc-300"
@@ -529,87 +529,78 @@ export default function ModelSearch() {
           )}
         </div>
 
-        {dropdownOpen && (
-          <FilterPopover
-            filters={filters}
-            setFilter={setFilter}
-            onClearFilters={clearFilters}
-            activeCount={activeFilterCount}
-          />
-        )}
-      </div>
+        <div className="text-xs text-zinc-400 dark:text-zinc-500">
+          {loading ? (
+            "Searching…"
+          ) : error ? (
+            <span className="text-red-500">{error}</span>
+          ) : (
+            `${results.length} ${results.length === 1 ? "model" : "models"} found`
+          )}
+        </div>
 
-      {/* Status */}
-      <div className="text-xs text-zinc-400 dark:text-zinc-500">
-        {loading ? (
-          "Searching…"
-        ) : error ? (
-          <span className="text-red-500">{error}</span>
+        {!loading && results.length === 0 && !error ? (
+          <div className="rounded-xl border border-dashed border-zinc-200 px-6 py-10 text-center dark:border-zinc-800">
+            <p className="text-sm text-zinc-400 dark:text-zinc-500">No models match your filters.</p>
+          </div>
         ) : (
-          `${results.length} ${results.length === 1 ? "model" : "models"} found`
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {results.map((model) => {
+              const pName = resolveProviderName(model);
+              const rating = model.avg_rating != null ? Number(model.avg_rating) : null;
+              const reviewCount = model.total_reviews ?? 0;
+
+              return (
+                <Link
+                  key={model.id}
+                  href={`/models/${model.slug}`}
+                  className="group flex flex-col rounded-xl border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+                >
+                  {pName !== "—" && (
+                    <div className="mb-2 flex items-center gap-1.5">
+                      <ProviderLogo name={pName} logoUrl={resolveLogoUrl(model)} size={14} />
+                      <p className="truncate text-xs font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                        {pName}
+                      </p>
+                    </div>
+                  )}
+
+                  <h3 className="mb-3 truncate text-sm font-semibold text-zinc-900 group-hover:text-zinc-700 dark:text-zinc-100 dark:group-hover:text-zinc-200">
+                    {model.name}
+                  </h3>
+
+                  <div className="mb-3 flex items-center gap-2">
+                    {rating !== null && rating > 0 ? (
+                      <>
+                        <StarDisplay rating={rating} />
+                        <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                          {rating.toFixed(1)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-zinc-300 dark:text-zinc-600">No ratings yet</span>
+                    )}
+                    {reviewCount > 0 && (
+                      <span className="text-xs text-zinc-400 dark:text-zinc-500">({reviewCount})</span>
+                    )}
+                  </div>
+
+                  <div className="mt-auto flex gap-4 pt-1">
+                    <PriceTag label="Input" cents={model.input_price_per_million_cents} />
+                    <PriceTag label="Output" cents={model.output_price_per_million_cents} />
+                  </div>
+                  <div className="mt-3 border-t border-zinc-100 pt-2 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                    <p>Latency: {formatLatencyMs(model.latency_ttft_ms)}</p>
+                    <p>Throughput: {formatThroughputTps(model.throughput_tokens_per_sec)}</p>
+                    <p>Context: {formatContextTokens(model.context_length_tokens)}</p>
+                    {model.perf_source && <p>Source: {model.perf_source}</p>}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         )}
       </div>
-
-      {/* Results grid */}
-      {!loading && results.length === 0 && !error ? (
-        <div className="rounded-xl border border-dashed border-zinc-200 px-6 py-10 text-center dark:border-zinc-800">
-          <p className="text-sm text-zinc-400 dark:text-zinc-500">No models match your filters.</p>
-        </div>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {results.map((model) => {
-            const pName = resolveProviderName(model);
-            const rating = model.avg_rating != null ? Number(model.avg_rating) : null;
-            const reviewCount = model.total_reviews ?? 0;
-
-            return (
-              <Link
-                key={model.id}
-                href={`/models/${model.slug}`}
-                className="group flex flex-col rounded-xl border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
-              >
-                {/* Provider row */}
-                {pName !== "—" && (
-                  <div className="mb-2 flex items-center gap-1.5">
-                    <ProviderLogo name={pName} logoUrl={resolveLogoUrl(model)} size={14} />
-                    <p className="truncate text-xs font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                      {pName}
-                    </p>
-                  </div>
-                )}
-
-                {/* Model name */}
-                <h3 className="mb-3 truncate text-sm font-semibold text-zinc-900 group-hover:text-zinc-700 dark:text-zinc-100 dark:group-hover:text-zinc-200">
-                  {model.name}
-                </h3>
-
-                {/* Rating */}
-                <div className="mb-3 flex items-center gap-2">
-                  {rating !== null && rating > 0 ? (
-                    <>
-                      <StarDisplay rating={rating} />
-                      <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                        {rating.toFixed(1)}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-zinc-300 dark:text-zinc-600">No ratings yet</span>
-                  )}
-                  {reviewCount > 0 && (
-                    <span className="text-xs text-zinc-400 dark:text-zinc-500">({reviewCount})</span>
-                  )}
-                </div>
-
-                {/* Pricing */}
-                <div className="mt-auto flex gap-4 pt-1">
-                  <PriceTag label="Input" cents={model.input_price_per_million_cents} />
-                  <PriceTag label="Output" cents={model.output_price_per_million_cents} />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }

@@ -23,6 +23,11 @@ export type Model = {
   parameters?: string | null;
   layers?: number | null;
   gb_size?: number | null;
+  context_length_tokens?: number | null;
+  latency_ttft_ms?: number | null;
+  throughput_tokens_per_sec?: number | null;
+  perf_source?: string | null;
+  perf_updated_at?: string | null;
   input_price_per_million_cents?: number | null;
   output_price_per_million_cents?: number | null;
   providers: Provider | null;
