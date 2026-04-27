@@ -268,7 +268,7 @@ function FilterSidebar({
   activeCount: number;
 }) {
   return (
-    <aside className="sticky top-20 h-fit rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <aside className="h-fit self-start rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Filters</h3>
         {activeCount > 0 && (
@@ -475,7 +475,7 @@ export default function ModelSearch() {
   ].filter(Boolean).length;
 
   return (
-    <div className="grid grid-cols-[260px,minmax(0,1fr)] gap-4">
+    <div className="grid gap-4 lg:grid-cols-[280px,minmax(0,1fr)] lg:gap-6">
       <FilterSidebar
         filters={filters}
         setFilter={setFilter}

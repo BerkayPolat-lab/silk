@@ -1,0 +1,109 @@
+{
+  "total_openrouter_rows": 360,
+  "eligible_by_metrics_count": 98,
+  "selected_for_write_count": 5,
+  "selected": [
+    {
+      "slug": "gpt-5-5-pro",
+      "name": "OpenAI: GPT-5.5 Pro",
+      "provider_name": "openai",
+      "company_name": "OpenAI",
+      "completeness_score": 9,
+      "completeness_fields": [
+        "description",
+        "context_length_tokens",
+        "latency_ttft_ms",
+        "throughput_tokens_per_sec",
+        "api_docs",
+        "website",
+        "logo_url",
+        "litellm_model_id",
+        "perf_source"
+      ],
+      "existing_provider_company_match": true,
+      "selection_bucket": "A"
+    },
+    {
+      "slug": "gpt-5-5",
+      "name": "OpenAI: GPT-5.5",
+      "provider_name": "openai",
+      "company_name": "OpenAI",
+      "completeness_score": 9,
+      "completeness_fields": [
+        "description",
+        "context_length_tokens",
+        "latency_ttft_ms",
+        "throughput_tokens_per_sec",
+        "api_docs",
+        "website",
+        "logo_url",
+        "litellm_model_id",
+        "perf_source"
+      ],
+      "existing_provider_company_match": true,
+      "selection_bucket": "A"
+    },
+    {
+      "slug": "deepseek-v4-pro",
+      "name": "DeepSeek: DeepSeek V4 Pro",
+      "provider_name": "deepseek",
+      "company_name": "DeepSeek",
+      "completeness_score": 9,
+      "completeness_fields": [
+        "description",
+        "context_length_tokens",
+        "latency_ttft_ms",
+        "throughput_tokens_per_sec",
+        "api_docs",
+        "website",
+        "logo_url",
+        "litellm_model_id",
+        "perf_source"
+      ],
+      "existing_provider_company_match": true,
+      "selection_bucket": "A"
+    },
+    {
+      "slug": "deepseek-v4-flash",
+      "name": "DeepSeek: DeepSeek V4 Flash",
+      "provider_name": "deepseek",
+      "company_name": "DeepSeek",
+      "completeness_score": 9,
+      "completeness_fields": [
+        "description",
+        "context_length_tokens",
+        "latency_ttft_ms",
+        "throughput_tokens_per_sec",
+        "api_docs",
+        "website",
+        "logo_url",
+        "litellm_model_id",
+        "perf_source"
+      ],
+      "existing_provider_company_match": true,
+      "selection_bucket": "A"
+    },
+    {
+      "slug": "gpt-5-4-image-2",
+      "name": "OpenAI: GPT-5.4 Image 2",
+      "provider_name": "openai",
+      "company_name": "OpenAI",
+      "completeness_score": 9,
+      "completeness_fields": [
+        "description",
+        "context_length_tokens",
+        "latency_ttft_ms",
+        "throughput_tokens_per_sec",
+        "api_docs",
+        "website",
+        "logo_url",
+        "litellm_model_id",
+        "perf_source"
+      ],
+      "existing_provider_company_match": true,
+      "selection_bucket": "A"
+    }
+  ],
+  "existing_model_updates_count": 21,
+  "candidates_scored_count": 98
+}
