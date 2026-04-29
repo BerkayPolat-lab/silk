@@ -346,11 +346,10 @@ export default function CompareModelsPanel() {
         .select(
           `id, name, slug, avg_rating, total_reviews,
            input_price_per_million_cents, output_price_per_million_cents,
-           type_of_ai, parameters, gb_size,
+           type_of_ai, parameters,
            context_length_tokens, latency_ttft_ms, throughput_tokens_per_sec, perf_source, perf_updated_at,
            providers ( name, companies ( logo_url ) )`
-        )
-        .order("rank_order", { ascending: true, nullsFirst: false });
+        );
       setAllModels((data ?? []) as unknown as ModelSearchResult[]);
       setLoadingModels(false);
     })();

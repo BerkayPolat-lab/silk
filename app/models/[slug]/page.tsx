@@ -17,7 +17,7 @@ export default async function ModelPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: model } = await supabase
+  const { data: model, error: modelError } = await supabase
     .from("models")
     .select(
       `
@@ -26,14 +26,11 @@ export default async function ModelPage({
       slug,
       description,
       highlights,
-      rank_order,
       api_docs,
       avg_rating,
       total_reviews,
       type_of_ai,
       parameters,
-      layers,
-      gb_size,
       input_price_per_million_cents,
       output_price_per_million_cents,
       providers (
@@ -51,15 +48,38 @@ export default async function ModelPage({
     `
     )
     .eq("slug", slug)
-    .single();
+    .maybeSingle();
 
-  if (!model) notFound();
+  if (modelError) {
+    console.error("Failed to fetch model by slug", {
+      slug,
+      code: modelError.code,
+      message: modelError.message,
+      details: modelError.details,
+    });
+    throw new Error("Unable to load model details right now.");
+  }
 
-  const { data: reviews } = await supabase
+  if (!model) {
+    console.warn("Model slug not found", { slug });
+    notFound();
+  }
+
+  const { data: reviews, error: reviewsError } = await supabase
     .from("reviews")
     .select("model_id, comment_id, user_id, author_name, rating, content, created_at")
     .eq("model_id", model.id)
     .order("created_at", { ascending: false });
+
+  if (reviewsError) {
+    console.error("Failed to fetch model reviews", {
+      slug,
+      modelId: model.id,
+      code: reviewsError.code,
+      message: reviewsError.message,
+      details: reviewsError.details,
+    });
+  }
 
   const rawProviders = model.providers;
   const providers = Array.isArray(rawProviders)
@@ -68,6 +88,9 @@ export default async function ModelPage({
 
   const modelDetail: ModelDetail = {
     ...model,
+    rank_order: null,
+    layers: null,
+    gb_size: null,
     reviews: (reviews ?? []) as Review[],
     providers: providers as unknown as ModelDetail["providers"],
   };

@@ -878,8 +878,7 @@ async function main() {
   ] = await Promise.all([
     supabase
       .from("models")
-      .select("id, provider_id, name, slug, litellm_model_id, gb_size")
-      .order("rank_order", { ascending: true, nullsFirst: false }),
+      .select("id, provider_id, name, slug, litellm_model_id"),
     supabase.from("providers").select("id, company_id, name, slug"),
     supabase.from("companies").select("id, name, logo_url, website"),
     fetchOpenRouterCatalog(),

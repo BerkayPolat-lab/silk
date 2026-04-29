@@ -1,7 +1,7 @@
 -- Selected rows should have both metrics.
 SELECT slug, latency_ttft_ms, throughput_tokens_per_sec
 FROM public.models
-WHERE slug IN ('gpt-5-5-pro', 'gpt-5-5', 'deepseek-v4-pro', 'deepseek-v4-flash', 'gpt-5-4-image-2')
+WHERE slug IN ('claude-haiku-latest', 'gpt-mini-latest', 'claude-sonnet-latest', 'gpt-latest', 'gpt-5-5-pro', 'gpt-5-5', 'deepseek-v4-pro', 'deepseek-v4-flash', 'gpt-5-4-image-2', 'claude-opus-latest')
   AND (latency_ttft_ms IS NULL OR throughput_tokens_per_sec IS NULL);
 
 -- Duplicate checks.

@@ -16,7 +16,6 @@ export async function GET(request: Request) {
       slug,
       description,
       highlights,
-      rank_order,
       providers (
         id,
         name,

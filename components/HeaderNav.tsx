@@ -16,6 +16,7 @@ export default function HeaderNav({ isAuthenticated }: { isAuthenticated: boolea
   const pathname = usePathname();
   const isMarketplaceActive = pathname === "/";
   const isCompareActive = pathname.startsWith("/compare");
+  const isAnalyticsActive = pathname.startsWith("/analytics");
   const isDashboardActive = pathname.startsWith("/dashboard");
 
   return (
@@ -30,6 +31,9 @@ export default function HeaderNav({ isAuthenticated }: { isAuthenticated: boolea
         }`}
       >
         Compare
+      </Link>
+      <Link href="/analytics" className={tabClassName(isAnalyticsActive)}>
+        Analytics
       </Link>
       {isAuthenticated ? (
         <>

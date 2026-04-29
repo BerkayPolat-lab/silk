@@ -256,106 +256,6 @@ const CONTEXT_OPTIONS = [
   { label: "≥ 1M", value: "1000000" },
 ];
 
-function FilterSidebar({
-  filters,
-  setFilter,
-  onClearFilters,
-  activeCount,
-}: {
-  filters: Filters;
-  setFilter: <K extends keyof Filters>(k: K, v: Filters[K]) => void;
-  onClearFilters: () => void;
-  activeCount: number;
-}) {
-  return (
-    <aside className="h-fit self-start rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Filters</h3>
-        {activeCount > 0 && (
-          <button
-            type="button"
-            onClick={onClearFilters}
-            className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-          >
-            Clear all
-          </button>
-        )}
-      </div>
-
-      <div className="space-y-6">
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            Min rating
-          </p>
-          <SegmentedPicker
-            options={RATING_OPTIONS}
-            value={filters.minRating}
-            onChange={(v) => setFilter("minRating", v)}
-          />
-        </div>
-
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            Min reviews
-          </p>
-          <SegmentedPicker
-            options={REVIEW_OPTIONS}
-            value={filters.minReviews}
-            onChange={(v) => setFilter("minReviews", v)}
-          />
-        </div>
-
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            Max input price
-          </p>
-          <StyledSelect
-            options={INPUT_PRICE_OPTIONS}
-            value={filters.maxInputPrice}
-            onChange={(v) => setFilter("maxInputPrice", v)}
-          />
-        </div>
-
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            Max output price
-          </p>
-          <StyledSelect
-            options={OUTPUT_PRICE_OPTIONS}
-            value={filters.maxOutputPrice}
-            onChange={(v) => setFilter("maxOutputPrice", v)}
-          />
-        </div>
-
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Max latency</p>
-          <StyledSelect options={LATENCY_OPTIONS} value={filters.maxLatencyMs} onChange={(v) => setFilter("maxLatencyMs", v)} />
-        </div>
-
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-            Min throughput
-          </p>
-          <StyledSelect
-            options={THROUGHPUT_OPTIONS}
-            value={filters.minThroughputTps}
-            onChange={(v) => setFilter("minThroughputTps", v)}
-          />
-        </div>
-
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Min context</p>
-          <StyledSelect
-            options={CONTEXT_OPTIONS}
-            value={filters.minContextLength}
-            onChange={(v) => setFilter("minContextLength", v)}
-          />
-        </div>
-      </div>
-    </aside>
-  );
-}
-
 // ── Model card sub-components ─────────────────────────────────────────────────
 
 function StarDisplay({ rating }: { rating: number }) {
@@ -389,6 +289,8 @@ function PriceTag({ label, cents }: { label: string; cents: number }) {
 
 export default function ModelSearch() {
   const supabaseRef = useRef(createClient());
+  const filterDropdownRef = useRef<HTMLDivElement | null>(null);
+  const advancedFiltersRef = useRef<HTMLDivElement | null>(null);
   const [filters, setFilters] = useState<Filters>({
     query: "",
     minRating: "",
@@ -402,6 +304,8 @@ export default function ModelSearch() {
   const [results, setResults] = useState<ModelSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function setFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
@@ -417,11 +321,10 @@ export default function ModelSearch() {
       .select(
         `id, name, slug, avg_rating, total_reviews,
          input_price_per_million_cents, output_price_per_million_cents,
-         type_of_ai, parameters, gb_size,
+         type_of_ai, parameters,
          context_length_tokens, latency_ttft_ms, throughput_tokens_per_sec, perf_source, perf_updated_at,
          providers ( name, companies ( logo_url ) )`
-      )
-      .order("rank_order", { ascending: true, nullsFirst: false });
+      );
 
     if (f.query.trim()) query = query.ilike("name", `%${f.query.trim()}%`);
     if (f.minRating !== "") query = query.gte("avg_rating", Number(f.minRating));
@@ -451,6 +354,23 @@ export default function ModelSearch() {
     };
   }, [filters]);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(target)) {
+        setShowFilterDropdown(false);
+      }
+      if (advancedFiltersRef.current && !advancedFiltersRef.current.contains(target)) {
+        setShowAdvancedFilters(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   function clearFilters() {
     setFilters((prev) => ({
       ...prev,
@@ -475,13 +395,127 @@ export default function ModelSearch() {
   ].filter(Boolean).length;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[280px,minmax(0,1fr)] lg:gap-6">
-      <FilterSidebar
-        filters={filters}
-        setFilter={setFilter}
-        onClearFilters={clearFilters}
-        activeCount={activeFilterCount}
-      />
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative" ref={filterDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setShowFilterDropdown((prev) => !prev)}
+            className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100"
+          >
+            Filter
+          </button>
+
+          {showFilterDropdown && (
+            <div className="absolute left-0 top-full z-20 mt-2 w-72 rounded-xl border border-zinc-200 bg-white p-3 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="space-y-3">
+                <div>
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Min rating
+                  </p>
+                  <SegmentedPicker
+                    options={RATING_OPTIONS}
+                    value={filters.minRating}
+                    onChange={(v) => setFilter("minRating", v)}
+                  />
+                </div>
+
+                <div>
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Min reviews
+                  </p>
+                  <SegmentedPicker
+                    options={REVIEW_OPTIONS}
+                    value={filters.minReviews}
+                    onChange={(v) => setFilter("minReviews", v)}
+                  />
+                </div>
+
+                <div>
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Max input price
+                  </p>
+                  <StyledSelect
+                    options={INPUT_PRICE_OPTIONS}
+                    value={filters.maxInputPrice}
+                    onChange={(v) => setFilter("maxInputPrice", v)}
+                  />
+                </div>
+
+                <div>
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Max output price
+                  </p>
+                  <StyledSelect
+                    options={OUTPUT_PRICE_OPTIONS}
+                    value={filters.maxOutputPrice}
+                    onChange={(v) => setFilter("maxOutputPrice", v)}
+                  />
+                </div>
+
+                <div>
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Min context
+                  </p>
+                  <StyledSelect
+                    options={CONTEXT_OPTIONS}
+                    value={filters.minContextLength}
+                    onChange={(v) => setFilter("minContextLength", v)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="relative" ref={advancedFiltersRef}>
+          <button
+            type="button"
+            onClick={() => setShowAdvancedFilters((prev) => !prev)}
+            className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100"
+          >
+            Advanced Filters
+          </button>
+
+          {showAdvancedFilters && (
+            <div className="absolute left-0 top-full z-20 mt-2 w-72 rounded-xl border border-zinc-200 bg-white p-3 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="space-y-3">
+                <div>
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Max latency
+                  </p>
+                  <StyledSelect
+                    options={LATENCY_OPTIONS}
+                    value={filters.maxLatencyMs}
+                    onChange={(v) => setFilter("maxLatencyMs", v)}
+                  />
+                </div>
+
+                <div>
+                  <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Min throughput
+                  </p>
+                  <StyledSelect
+                    options={THROUGHPUT_OPTIONS}
+                    value={filters.minThroughputTps}
+                    onChange={(v) => setFilter("minThroughputTps", v)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {activeFilterCount > 0 && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+          >
+            Clear all filters
+          </button>
+        )}
+      </div>
 
       <div className="space-y-4">
         <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 shadow-sm transition-colors dark:border-zinc-800 dark:bg-zinc-900">
@@ -593,7 +627,6 @@ export default function ModelSearch() {
                     <p>Latency: {formatLatencyMs(model.latency_ttft_ms)}</p>
                     <p>Throughput: {formatThroughputTps(model.throughput_tokens_per_sec)}</p>
                     <p>Context: {formatContextTokens(model.context_length_tokens)}</p>
-                    {model.perf_source && <p>Source: {model.perf_source}</p>}
                   </div>
                 </Link>
               );
