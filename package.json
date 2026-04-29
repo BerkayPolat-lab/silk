@@ -3,18 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev:web": "next dev",
+    "dev:litellm": "litellm --config /Users/berkaypolat/Desktop/silk/litellm_config.yaml --port 4000 --host 0.0.0.0",
+    "dev:stripe": "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
+    "dev": "dotenv -e .env.local -- concurrently -k -n LITELLM,STRIPE,WEB -c cyan,magenta,green \"npm:dev:litellm\" \"npm:dev:stripe\" \"npm:dev:web\"",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "enrich:model-metadata": "dotenv -e .env.local -- node scripts/model-metadata/enrich-model-metadata.mjs --print-sources"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.98.0",
-    "next": "16.1.6",
+    "next": "^16.2.3",
     "openai": "^6.25.0",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "stripe": "^17.7.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

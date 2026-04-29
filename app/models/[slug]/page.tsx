@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import type { ModelDetail, Review, ReviewWithOwnership } from "@/types";
 import ReviewForm from "@/components/reviews/ReviewForm";
 import ReviewList from "@/components/reviews/ReviewList";
-import AddToCartButton from "@/components/cart/AddToCartButton";
+import { ProviderLogo } from "@/components/ModelSearch";
 
 export default async function ModelPage({
   params,
@@ -30,6 +30,12 @@ export default async function ModelPage({
       api_docs,
       avg_rating,
       total_reviews,
+      type_of_ai,
+      parameters,
+      layers,
+      gb_size,
+      input_price_per_million_cents,
+      output_price_per_million_cents,
       providers (
         id,
         name,
@@ -100,11 +106,20 @@ export default async function ModelPage({
 
       {/* Page header */}
       <div className="mb-10 border-b border-zinc-100 pb-8 dark:border-zinc-800">
-        {/* Provider label */}
+        {/* Provider label + logo */}
         {(company?.name ?? provider?.name) && (
-          <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-            {company?.name ?? provider?.name}
-          </p>
+          <div className="mb-3 flex items-center gap-3">
+            {provider && (
+              <ProviderLogo
+                name={provider.name}
+                logoUrl={company?.logo_url ?? null}
+                size={36}
+              />
+            )}
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              {company?.name ?? provider?.name}
+            </p>
+          </div>
         )}
 
         <h1 className="mb-3 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -138,19 +153,6 @@ export default async function ModelPage({
             </a>
           )}
         </div>
-
-        {/* Cart button */}
-        {provider?.id && (
-          <AddToCartButton
-            model={{
-              id: modelDetail.id,
-              slug: modelDetail.slug,
-              name: modelDetail.name,
-              providerId: provider.id,
-              providerName: provider.name ?? "",
-            }}
-          />
-        )}
       </div>
 
       {/* Overview */}
@@ -162,6 +164,68 @@ export default async function ModelPage({
           <p className="leading-relaxed text-zinc-600 dark:text-zinc-400">
             {modelDetail.description}
           </p>
+        </section>
+      )}
+
+      {/* Model specs */}
+      {(modelDetail.type_of_ai || modelDetail.parameters || modelDetail.layers != null || modelDetail.gb_size != null) && (
+        <section className="mb-8">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+            Specifications
+          </h2>
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {modelDetail.type_of_ai && (
+              <div className="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/50">
+                <dt className="mb-0.5 text-xs text-zinc-400 dark:text-zinc-500">Type</dt>
+                <dd className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{modelDetail.type_of_ai}</dd>
+              </div>
+            )}
+            {modelDetail.parameters && (
+              <div className="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/50">
+                <dt className="mb-0.5 text-xs text-zinc-400 dark:text-zinc-500">Parameters</dt>
+                <dd className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{modelDetail.parameters}</dd>
+              </div>
+            )}
+            {modelDetail.layers != null && (
+              <div className="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/50">
+                <dt className="mb-0.5 text-xs text-zinc-400 dark:text-zinc-500">Layers</dt>
+                <dd className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{modelDetail.layers}</dd>
+              </div>
+            )}
+            {modelDetail.gb_size != null && (
+              <div className="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/50">
+                <dt className="mb-0.5 text-xs text-zinc-400 dark:text-zinc-500">Size</dt>
+                <dd className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{Number(modelDetail.gb_size).toFixed(1)} GB</dd>
+              </div>
+            )}
+          </dl>
+        </section>
+      )}
+
+      {/* Pricing */}
+      {(modelDetail.input_price_per_million_cents != null || modelDetail.output_price_per_million_cents != null) && (
+        <section className="mb-8">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+            Pricing
+          </h2>
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {modelDetail.input_price_per_million_cents != null && (
+              <div className="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/50">
+                <dt className="mb-0.5 text-xs text-zinc-400 dark:text-zinc-500">Input / 1M tokens</dt>
+                <dd className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  ${(modelDetail.input_price_per_million_cents / 100).toFixed(4)}
+                </dd>
+              </div>
+            )}
+            {modelDetail.output_price_per_million_cents != null && (
+              <div className="rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/50">
+                <dt className="mb-0.5 text-xs text-zinc-400 dark:text-zinc-500">Output / 1M tokens</dt>
+                <dd className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  ${(modelDetail.output_price_per_million_cents / 100).toFixed(4)}
+                </dd>
+              </div>
+            )}
+          </dl>
         </section>
       )}
 

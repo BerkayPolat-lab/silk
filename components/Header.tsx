@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { SignOutButton } from "@/components/SignOutButton";
-import CartDrawer from "@/components/cart/CartDrawer";
+import Link from "next/link";
+import HeaderNav from "@/components/HeaderNav";
 
 export async function Header() {
   const supabase = await createClient();
@@ -15,41 +14,7 @@ export async function Header() {
         <Link href="/" className="text-xl font-bold tracking-tight text-red-500 hover:text-red-600 transition-colors">
           Silk
         </Link>
-        <nav className="flex items-center gap-5 text-sm">
-          <Link
-            href="/"
-            className="font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-          >
-            Marketplace
-          </Link>
-          {user ? (
-            <>
-              <Link
-                href="/dashboard"
-                className="font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-              >
-                Dashboard
-              </Link>
-              <CartDrawer />
-              <SignOutButton />
-            </>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className="font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-              >
-                Sign in
-              </Link>
-              <Link
-                href="/signup"
-                className="rounded-lg bg-zinc-900 px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-              >
-                Sign up
-              </Link>
-            </>
-          )}
-        </nav>
+        <HeaderNav isAuthenticated={Boolean(user)} />
       </div>
     </header>
   );

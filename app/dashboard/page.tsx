@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import PlatformApiKeySection from "@/components/billing/PlatformApiKeySection";
+import { kalshiDepositButtonClassName } from "@/lib/kalshiDepositButton";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -30,37 +32,46 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login");
 
-  // Provider keys the user has submitted, joined with provider + its models
-  const { data: providerKeys } = await supabase
-    .from("user_api_keys")
-    .select(
-      `
-      id,
-      key_prefix,
-      name,
-      created_at,
-      last_used_at,
-      providers (
-        id,
-        name,
-        slug,
-        companies ( name ),
-        models ( id, name, slug )
-      )
-    `
-    )
-    .eq("user_id", user.id)
-    .not("provider_id", "is", null)
-    .order("created_at", { ascending: false });
+  const emailRaw = user.email?.trim() ?? "";
+  const emailInitial =
+    emailRaw.length > 0 ? emailRaw[0]!.toUpperCase() : "?";
 
-  // Sandbox usage — models the user has chatted with
-  const { data: usage } = await supabase
-    .from("api_usage")
+  const { data: wallet } = await supabase
+    .from("user_wallets")
+    .select("balance_cents")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const balanceCents = Number(wallet?.balance_cents ?? 0);
+  const canCreatePlatformKey = balanceCents > 0;
+
+  const { data: platformKey } = await supabase
+    .from("user_api_keys")
+    .select("id, key_prefix, created_at, last_used_at")
+    .eq("user_id", user.id)
+    .eq("key_type", "platform")
+    .maybeSingle();
+
+  const { data: byokKeys } = await supabase
+    .from("user_api_keys")
+    .select("id")
+    .eq("user_id", user.id)
+    .not("provider_id", "is", null);
+
+  const keyList = byokKeys ?? [];
+
+  const { data: usageEvents } = await supabase
+    .from("api_usage_events")
     .select(
       `
-      request_count,
-      first_used_at,
-      last_used_at,
+      model_id,
+      prompt_tokens,
+      completion_tokens,
+      cost_cents,
+      created_at,
+      rollup_request_count,
+      legacy_first_used_at,
+      source,
       models (
         id,
         name,
@@ -72,21 +83,49 @@ export default async function DashboardPage() {
       )
     `
     )
-    .eq("user_id", user.id)
-    .order("last_used_at", { ascending: false });
+    .eq("user_id", user.id);
 
-  const keyList = providerKeys ?? [];
-  const usageList = usage ?? [];
+  type UsageEventRow = NonNullable<typeof usageEvents>[number];
 
-  const totalModels = keyList.reduce((acc, key) => {
-    const provider = Array.isArray(key.providers) ? key.providers[0] : key.providers;
-    const models = provider ? (Array.isArray(provider.models) ? provider.models : []) : [];
-    return acc + models.length;
-  }, 0);
+  const usageByModel = new Map<
+    string,
+    {
+      requestCount: number;
+      lastUsedAt: string;
+      firstUsedAt: string;
+      model: UsageEventRow["models"];
+    }
+  >();
 
-  const totalRequests = usageList.reduce((acc, u) => acc + (u.request_count ?? 0), 0);
+  for (const row of usageEvents ?? []) {
+    const mid = row.model_id;
+    const req = row.rollup_request_count ?? 1;
+    const firstCandidate = row.legacy_first_used_at ?? row.created_at;
+    const existing = usageByModel.get(mid);
+    if (!existing) {
+      usageByModel.set(mid, {
+        requestCount: req,
+        lastUsedAt: row.created_at,
+        firstUsedAt: firstCandidate,
+        model: row.models,
+      });
+    } else {
+      existing.requestCount += req;
+      if (new Date(row.created_at) > new Date(existing.lastUsedAt)) {
+        existing.lastUsedAt = row.created_at;
+      }
+      if (new Date(firstCandidate) < new Date(existing.firstUsedAt)) {
+        existing.firstUsedAt = firstCandidate;
+      }
+    }
+  }
 
-  const emailInitial = (user.email ?? "U")[0].toUpperCase();
+  const usageList = [...usageByModel.values()].sort(
+    (a, b) => new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime()
+  );
+
+  const totalModels = usageList.length;
+  const totalRequests = usageList.reduce((acc, u) => acc + u.requestCount, 0);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -110,88 +149,36 @@ export default async function DashboardPage() {
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Provider Keys                                                        */}
+      {/* Billing & platform API                                               */}
       {/* ------------------------------------------------------------------ */}
-      <section className="mb-8">
-        <div className="mb-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Provider Keys</h2>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Models you have API access to via your submitted keys.
+      <section className="mb-10">
+        <h2 className="mb-1 text-lg font-semibold">Billing &amp; API access</h2>
+        <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
+          Prepaid credits and your Silk-issued API key for the metered gateway.
+        </p>
+
+        <div className="mb-6 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+              Prepaid balance
+            </h3>
+            <Link href="/billing/add-funds" className={kalshiDepositButtonClassName}>
+              Add funds
+            </Link>
+          </div>
+          <p className="mb-2 text-sm text-zinc-600 dark:text-zinc-400">
+            Top up with Stripe. You need a positive balance to generate a platform API key.
+          </p>
+          <p className="font-mono text-lg tabular-nums text-zinc-900 dark:text-zinc-100">
+            ${(balanceCents / 100).toFixed(2)}{" "}
+            <span className="text-sm font-sans text-zinc-500">USD</span>
           </p>
         </div>
 
-        {keyList.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-zinc-200 px-6 py-8 text-center dark:border-zinc-800">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              You haven&apos;t submitted any provider keys yet.
-            </p>
-            <Link
-              href="/"
-              className="mt-3 inline-block text-sm font-medium underline underline-offset-2 hover:text-zinc-600"
-            >
-              Browse the marketplace →
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {keyList.map((key) => {
-              const provider = Array.isArray(key.providers)
-                ? key.providers[0]
-                : key.providers;
-              const company = provider
-                ? Array.isArray(provider.companies)
-                  ? provider.companies[0]
-                  : provider.companies
-                : null;
-              const models: { id: string; name: string; slug: string }[] =
-                provider
-                  ? Array.isArray(provider.models)
-                    ? provider.models
-                    : []
-                  : [];
-
-              return (
-                <div
-                  key={key.id}
-                  className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
-                >
-                  <div className="mb-3 flex items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                          {company?.name ?? provider?.name ?? "Unknown Provider"}
-                        </p>
-                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
-                          Active
-                        </span>
-                      </div>
-                      <p className="mt-0.5 font-mono text-xs text-zinc-400">
-                        {key.key_prefix}••••••••••••
-                      </p>
-                    </div>
-                    <span className="shrink-0 text-xs text-zinc-400">
-                      Added {timeAgo(key.created_at)}
-                    </span>
-                  </div>
-
-                  {models.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {models.map((m) => (
-                        <Link
-                          key={m.id}
-                          href={`/models/${m.slug}`}
-                          className="rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-                        >
-                          {m.name}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <h3 className="mb-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+          Silk platform API key
+        </h3>
+        <PlatformApiKeySection canCreateKey={canCreatePlatformKey} initialKey={platformKey} />
       </section>
 
       {/* ------------------------------------------------------------------ */}
@@ -238,7 +225,7 @@ export default async function DashboardPage() {
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {usageList.map((u, idx) => {
-                  const model = Array.isArray(u.models) ? u.models[0] : u.models;
+                  const model = Array.isArray(u.model) ? u.model[0] : u.model;
                   const provider = model
                     ? Array.isArray(model.providers)
                       ? model.providers[0]
@@ -270,11 +257,11 @@ export default async function DashboardPage() {
                       <td className="px-4 py-3 text-zinc-500 dark:text-zinc-400">
                         {company?.name ?? provider?.name ?? "—"}
                       </td>
-                      <td className="px-4 py-3 text-right font-medium tabular-nums">
-                        {u.request_count}
+                      <td className="px-4 py-3 text-right tabular-nums font-medium">
+                        {u.requestCount}
                       </td>
-                      <td className="px-4 py-3 text-right text-zinc-400">
-                        {timeAgo(u.last_used_at)}
+                      <td className="px-4 py-3 text-right text-zinc-500 dark:text-zinc-400">
+                        {timeAgo(u.lastUsedAt)}
                       </td>
                     </tr>
                   );

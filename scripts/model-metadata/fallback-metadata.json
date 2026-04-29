@@ -1,0 +1,9 @@
+{
+  "models": [
+    {
+      "key": "openai/gpt-oss-120b",
+      "throughput_tokens_per_sec": 58,
+      "source": "fallback:curated"
+    }
+  ]
+}
