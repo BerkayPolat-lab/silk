@@ -193,17 +193,22 @@ export async function POST(request: Request) {
     );
   }
 
-  const proxyUrl = process.env.LITELLM_PROXY_URL ?? "http://localhost:4000";
-  const serviceKey = process.env.LITELLM_SERVICE_API_KEY;
+  const openrouterKey = process.env.OPENROUTER_API_KEY;
+  if (!openrouterKey) {
+    return new Response(
+      JSON.stringify({ error: "OPENROUTER_API_KEY is not configured" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
-  const liteRes = await fetch(`${proxyUrl}/v1/chat/completions`, {
+  const liteRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(serviceKey ? { Authorization: `Bearer ${serviceKey}` } : {}),
+      Authorization: `Bearer ${openrouterKey}`,
     },
     body: JSON.stringify({
-      model: `openrouter/${mRow.litellm_model_id}`,
+      model: mRow.litellm_model_id,
       messages: normalized.map((msg) => ({
         role: msg.role,
         content: msg.content,
@@ -219,7 +224,7 @@ export async function POST(request: Request) {
     const text = await liteRes.text().catch(() => "");
     return new Response(
       JSON.stringify({
-        error: "LiteLLM request failed",
+        error: "OpenRouter request failed",
         details: text || undefined,
       }),
       { status: 500, headers: { "Content-Type": "application/json" } }

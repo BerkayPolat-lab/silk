@@ -70,8 +70,9 @@ export function SandboxChat({ modelSlug }: { modelSlug: string }) {
         const text = await res.text().catch(() => "");
         let message = text || `Request failed with ${res.status}`;
         try {
-          const j = JSON.parse(text) as { error?: unknown };
+          const j = JSON.parse(text) as { error?: unknown; details?: unknown };
           if (typeof j.error === "string") message = j.error;
+          if (typeof j.details === "string" && j.details) message += ` — ${j.details}`;
         } catch {
           /* keep raw */
         }

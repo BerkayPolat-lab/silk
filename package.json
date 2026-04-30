@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev:web": "next dev",
-    "dev:litellm": "litellm --config /Users/berkaypolat/Desktop/silk/litellm_config.yaml --port 4000 --host 0.0.0.0",
+    "dev:litellm": "dotenv -e .env.local -- litellm --config ./litellm_config.yaml --port 4000 --host 0.0.0.0",
     "dev:stripe": "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
     "dev": "dotenv -e .env.local -- concurrently -k -n LITELLM,STRIPE,WEB -c cyan,magenta,green \"npm:dev:litellm\" \"npm:dev:stripe\" \"npm:dev:web\"",
     "build": "next build",
@@ -26,6 +26,8 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
