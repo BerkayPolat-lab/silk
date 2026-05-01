@@ -337,8 +337,9 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
     }
   }
 
+  const weeklyTimeseries = timeseries.slice(-7);
   const marketShare = buildMarketShare({
-    timeseriesDates: timeseries.map((t) => t.date),
+    timeseriesDates: weeklyTimeseries.map((t) => t.date),
     perDayAuthorTokens,
   });
 

@@ -229,7 +229,7 @@ export default function AnalyticsClient({ overview }: { overview: AnalyticsOverv
       </section>
 
       <section className="space-y-6">
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Market share</h2>
+        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Market Share</h2>
 
         {marketShare.windowTotalTokens > 0 && stackKeys.length > 0 ? (
           <div className="flex gap-2">
